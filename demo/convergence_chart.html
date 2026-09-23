@@ -1,0 +1,332 @@
+<title>Сходимость ГА-планировщика</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page:           #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --grid:           #e1e0d9;
+    --axis:           #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --series-1:       #2a78d6; /* лучшее в поколении */
+    --series-2:       #eb6834; /* среднее по популяции */
+    --series-bar:     #2a78d6;
+    --ref-line:       #898781;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page:           #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --grid:           #2c2c2a;
+      --axis:           #383835;
+      --border:         rgba(255,255,255,0.10);
+      --series-1:       #3987e5;
+      --series-2:       #d95926;
+      --series-bar:     #3987e5;
+      --ref-line:       #898781;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --page:           #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --grid:           #2c2c2a;
+    --axis:           #383835;
+    --border:         rgba(255,255,255,0.10);
+    --series-1:       #3987e5;
+    --series-2:       #d95926;
+    --series-bar:     #3987e5;
+    --ref-line:       #898781;
+  }
+
+  .viz-root {
+    background: var(--page);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--text-primary);
+    padding: 24px;
+    box-sizing: border-box;
+  }
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px 24px;
+    max-width: 920px;
+    margin: 0 auto 24px;
+  }
+  h1 { font-size: 18px; margin: 0 0 2px; }
+  .subtitle { font-size: 13px; color: var(--text-secondary); margin: 0 0 16px; }
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-secondary); margin-bottom: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .swatch-line { width: 16px; height: 2px; border-radius: 1px; display: inline-block; }
+  .swatch-dash { width: 16px; height: 0; border-top: 2px dashed var(--ref-line); display: inline-block; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .grid-line { stroke: var(--grid); stroke-width: 1; }
+  .axis-line { stroke: var(--axis); stroke-width: 1; }
+  .axis-label { fill: var(--text-muted); font-size: 11px; }
+  .ref-line { stroke: var(--ref-line); stroke-width: 1.5; stroke-dasharray: 4 4; }
+  .ref-label { fill: var(--text-secondary); font-size: 11px; }
+  .crosshair { stroke: var(--axis); stroke-width: 1; pointer-events: none; }
+  .dot-ring { fill: var(--surface-1); }
+  .tooltip {
+    position: absolute; pointer-events: none; background: var(--surface-1);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+    font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); white-space: nowrap;
+    transform: translate(-50%, -110%); opacity: 0; transition: opacity 0.08s;
+  }
+  .tooltip.visible { opacity: 1; }
+  .tooltip .row { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+  .tooltip .row:first-child { margin-top: 0; }
+  .tooltip .key { width: 10px; height: 2px; display: inline-block; }
+  .tooltip .val { font-weight: 600; color: var(--text-primary); }
+  .tooltip .lbl { color: var(--text-secondary); }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin: 10px 0; font-size: 13px; }
+  .bar-name { width: 190px; flex: none; color: var(--text-secondary); }
+  .bar-track { flex: 1; position: relative; height: 22px; }
+  .bar-fill { position: absolute; left: 0; top: 3px; height: 16px; background: var(--series-bar); border-radius: 4px; }
+  .bar-value { margin-left: 8px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .note { font-size: 12px; color: var(--text-muted); margin-top: 14px; }
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 10px; }
+  table.data-table th, table.data-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--grid); }
+  table.data-table th { color: var(--text-muted); font-weight: 500; }
+  details summary { cursor: pointer; font-size: 12.5px; color: var(--text-secondary); margin-top: 12px; }
+</style>
+
+<div class="viz-root">
+  <div class="card">
+    <h1>Сходимость генетического алгоритма по поколениям</h1>
+    <p class="subtitle">Критерий F(x) = ΣqᵢCᵢ (меньше — лучше). Тестовый набор: 6 процессов с разными pᵢ, oᵢ, qᵢ, население 60 особей, 400 поколений, seed=2.</p>
+    <div class="legend">
+      <span class="legend-item"><span class="swatch-line" style="background:var(--series-1)"></span>Лучшая особь в поколении</span>
+      <span class="legend-item"><span class="swatch-line" style="background:var(--series-2)"></span>Средняя по популяции</span>
+      <span class="legend-item"><span class="swatch-dash"></span>Точный оптимум (перебор 6! порядков) = 243</span>
+    </div>
+    <div style="position: relative;">
+      <svg id="chart" viewBox="0 0 900 420" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+    <p class="note">Лучшая особь монотонно улучшается благодаря элитизму и на поколении 345 из 400 достигает 243 — точного оптимума, найденного полным перебором всех 6! порядков запуска (он же совпадает с правилом Смита: для этой модели точное решение известно, и мы используем его как эталон для проверки ГА). Средняя приспособленность популяции колеблется — это ожидаемо: кроссовер и мутация продолжают исследовать пространство решений.</p>
+  </div>
+
+  <div class="card">
+    <h1>Итоговое расписание: ГА против классических алгоритмов</h1>
+    <p class="subtitle">F(x) = ΣqᵢCᵢ на одном и том же наборе из 6 процессов (меньше — лучше).</p>
+    <div id="bars"></div>
+    <p class="note">ГА нашёл точный оптимум (243, подтверждено полным перебором) — он совпадает с WSPT/правилом Смита, которое для этой модели точное, и заметно опережает Priority Scheduling (252), SJF (260), Round Robin (363) и FCFS (386).</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  var HISTORY = [{"g":0,"bestF":356,"avgF":437.17},{"g":1,"bestF":337,"avgF":436.46},{"g":2,"bestF":337,"avgF":428.16},{"g":3,"bestF":337,"avgF":420.22},{"g":4,"bestF":337,"avgF":415.9},{"g":5,"bestF":337,"avgF":414.34},{"g":6,"bestF":337,"avgF":413.97},{"g":7,"bestF":333,"avgF":415.28},{"g":8,"bestF":333,"avgF":417.46},{"g":9,"bestF":331,"avgF":417.57},{"g":10,"bestF":331,"avgF":406.12},{"g":11,"bestF":324,"avgF":409.56},{"g":12,"bestF":323,"avgF":396.25},{"g":13,"bestF":309,"avgF":399.34},{"g":14,"bestF":309,"avgF":402.95},{"g":15,"bestF":309,"avgF":405.92},{"g":16,"bestF":309,"avgF":403.65},{"g":17,"bestF":309,"avgF":399.27},{"g":18,"bestF":309,"avgF":398.42},{"g":19,"bestF":309,"avgF":392.66},{"g":20,"bestF":297,"avgF":386.11},{"g":21,"bestF":297,"avgF":386.33},{"g":22,"bestF":297,"avgF":384.92},{"g":23,"bestF":297,"avgF":383.64},{"g":24,"bestF":297,"avgF":383.3},{"g":25,"bestF":297,"avgF":376.5},{"g":26,"bestF":297,"avgF":370.88},{"g":27,"bestF":296,"avgF":384.61},{"g":28,"bestF":296,"avgF":387.78},{"g":29,"bestF":296,"avgF":384.92},{"g":30,"bestF":293,"avgF":371.56},{"g":31,"bestF":293,"avgF":365.03},{"g":32,"bestF":291,"avgF":365.69},{"g":33,"bestF":290,"avgF":362.9},{"g":34,"bestF":289,"avgF":360.87},{"g":35,"bestF":284,"avgF":367.88},{"g":36,"bestF":284,"avgF":381.48},{"g":37,"bestF":284,"avgF":367.94},{"g":38,"bestF":284,"avgF":356.89},{"g":39,"bestF":284,"avgF":350.86},{"g":40,"bestF":284,"avgF":364.75},{"g":41,"bestF":284,"avgF":350.15},{"g":42,"bestF":284,"avgF":356.29},{"g":43,"bestF":284,"avgF":350.9},{"g":44,"bestF":284,"avgF":356.52},{"g":45,"bestF":284,"avgF":359.51},{"g":46,"bestF":284,"avgF":360.11},{"g":47,"bestF":284,"avgF":360.98},{"g":48,"bestF":284,"avgF":354.67},{"g":49,"bestF":284,"avgF":357.05},{"g":50,"bestF":283,"avgF":353.78},{"g":51,"bestF":283,"avgF":352.42},{"g":52,"bestF":283,"avgF":355.59},{"g":53,"bestF":283,"avgF":354.81},{"g":54,"bestF":283,"avgF":351.5},{"g":55,"bestF":283,"avgF":360.02},{"g":56,"bestF":283,"avgF":355.68},{"g":57,"bestF":283,"avgF":340.78},{"g":58,"bestF":283,"avgF":352.77},{"g":59,"bestF":283,"avgF":350.14},{"g":60,"bestF":283,"avgF":356.7},{"g":61,"bestF":283,"avgF":359.38},{"g":62,"bestF":283,"avgF":350.65},{"g":63,"bestF":283,"avgF":349.33},{"g":64,"bestF":283,"avgF":343.79},{"g":65,"bestF":283,"avgF":351.76},{"g":66,"bestF":280,"avgF":348.89},{"g":67,"bestF":280,"avgF":344.91},{"g":68,"bestF":280,"avgF":348.69},{"g":69,"bestF":280,"avgF":339.07},{"g":70,"bestF":280,"avgF":335.07},{"g":71,"bestF":280,"avgF":332.52},{"g":72,"bestF":265,"avgF":333.53},{"g":73,"bestF":265,"avgF":327.52},{"g":74,"bestF":265,"avgF":326.75},{"g":75,"bestF":265,"avgF":329.62},{"g":76,"bestF":262,"avgF":331.07},{"g":77,"bestF":262,"avgF":327.3},{"g":78,"bestF":262,"avgF":330.63},{"g":79,"bestF":262,"avgF":338.36},{"g":80,"bestF":262,"avgF":338.8},{"g":81,"bestF":261,"avgF":334.62},{"g":82,"bestF":261,"avgF":336.18},{"g":83,"bestF":261,"avgF":339.92},{"g":84,"bestF":261,"avgF":320.8},{"g":85,"bestF":261,"avgF":326.51},{"g":86,"bestF":261,"avgF":332.21},{"g":87,"bestF":261,"avgF":340.28},{"g":88,"bestF":261,"avgF":340.32},{"g":89,"bestF":261,"avgF":339.69},{"g":90,"bestF":261,"avgF":340.46},{"g":91,"bestF":261,"avgF":345.5},{"g":92,"bestF":261,"avgF":346.19},{"g":93,"bestF":261,"avgF":349.98},{"g":94,"bestF":261,"avgF":346.33},{"g":95,"bestF":261,"avgF":348.46},{"g":96,"bestF":261,"avgF":353.01},{"g":97,"bestF":261,"avgF":347.12},{"g":98,"bestF":261,"avgF":344.67},{"g":99,"bestF":261,"avgF":334.18},{"g":100,"bestF":261,"avgF":335.13},{"g":101,"bestF":261,"avgF":338.2},{"g":102,"bestF":261,"avgF":333.43},{"g":103,"bestF":261,"avgF":326.95},{"g":104,"bestF":261,"avgF":323.07},{"g":105,"bestF":261,"avgF":321.23},{"g":106,"bestF":261,"avgF":319.91},{"g":107,"bestF":261,"avgF":326.02},{"g":108,"bestF":261,"avgF":325.67},{"g":109,"bestF":261,"avgF":326.52},{"g":110,"bestF":260,"avgF":322.45},{"g":111,"bestF":260,"avgF":321.37},{"g":112,"bestF":260,"avgF":328.24},{"g":113,"bestF":258,"avgF":324.3},{"g":114,"bestF":258,"avgF":333.77},{"g":115,"bestF":258,"avgF":345.59},{"g":116,"bestF":258,"avgF":346.19},{"g":117,"bestF":258,"avgF":352.3},{"g":118,"bestF":258,"avgF":344.67},{"g":119,"bestF":258,"avgF":341.05},{"g":120,"bestF":258,"avgF":332.82},{"g":121,"bestF":258,"avgF":332.73},{"g":122,"bestF":258,"avgF":336.86},{"g":123,"bestF":258,"avgF":335.16},{"g":124,"bestF":258,"avgF":337.88},{"g":125,"bestF":258,"avgF":339.87},{"g":126,"bestF":258,"avgF":345.69},{"g":127,"bestF":258,"avgF":342.12},{"g":128,"bestF":258,"avgF":346.36},{"g":129,"bestF":258,"avgF":346.74},{"g":130,"bestF":258,"avgF":358.04},{"g":131,"bestF":258,"avgF":346.59},{"g":132,"bestF":258,"avgF":344.78},{"g":133,"bestF":258,"avgF":346.72},{"g":134,"bestF":258,"avgF":343.28},{"g":135,"bestF":258,"avgF":337.61},{"g":136,"bestF":258,"avgF":333.18},{"g":137,"bestF":257,"avgF":337.01},{"g":138,"bestF":257,"avgF":332.75},{"g":139,"bestF":257,"avgF":331.24},{"g":140,"bestF":257,"avgF":333.98},{"g":141,"bestF":257,"avgF":339.98},{"g":142,"bestF":257,"avgF":337.74},{"g":143,"bestF":257,"avgF":345},{"g":144,"bestF":257,"avgF":336.93},{"g":145,"bestF":257,"avgF":339.4},{"g":146,"bestF":257,"avgF":339.53},{"g":147,"bestF":257,"avgF":331.6},{"g":148,"bestF":257,"avgF":331.09},{"g":149,"bestF":254,"avgF":336.5},{"g":150,"bestF":254,"avgF":332.16},{"g":151,"bestF":254,"avgF":335.12},{"g":152,"bestF":254,"avgF":343.71},{"g":153,"bestF":254,"avgF":338.48},{"g":154,"bestF":254,"avgF":337.85},{"g":155,"bestF":254,"avgF":328.24},{"g":156,"bestF":254,"avgF":321.68},{"g":157,"bestF":254,"avgF":320},{"g":158,"bestF":254,"avgF":325.13},{"g":159,"bestF":254,"avgF":331.07},{"g":160,"bestF":254,"avgF":323.2},{"g":161,"bestF":254,"avgF":324.43},{"g":162,"bestF":254,"avgF":319.81},{"g":163,"bestF":254,"avgF":315.09},{"g":164,"bestF":254,"avgF":314.13},{"g":165,"bestF":254,"avgF":313.65},{"g":166,"bestF":254,"avgF":305.66},{"g":167,"bestF":248,"avgF":301.52},{"g":168,"bestF":248,"avgF":305.14},{"g":169,"bestF":248,"avgF":303.18},{"g":170,"bestF":248,"avgF":309.46},{"g":171,"bestF":248,"avgF":317.85},{"g":172,"bestF":248,"avgF":314.28},{"g":173,"bestF":248,"avgF":323.38},{"g":174,"bestF":248,"avgF":318.83},{"g":175,"bestF":248,"avgF":323.05},{"g":176,"bestF":248,"avgF":321.63},{"g":177,"bestF":248,"avgF":327.95},{"g":178,"bestF":248,"avgF":326.8},{"g":179,"bestF":248,"avgF":313.7},{"g":180,"bestF":248,"avgF":317.43},{"g":181,"bestF":248,"avgF":317.19},{"g":182,"bestF":248,"avgF":317.07},{"g":183,"bestF":248,"avgF":318.83},{"g":184,"bestF":248,"avgF":321.73},{"g":185,"bestF":248,"avgF":317.24},{"g":186,"bestF":248,"avgF":316.42},{"g":187,"bestF":248,"avgF":318.91},{"g":188,"bestF":248,"avgF":322.4},{"g":189,"bestF":248,"avgF":318.69},{"g":190,"bestF":248,"avgF":319.82},{"g":191,"bestF":248,"avgF":314.37},{"g":192,"bestF":248,"avgF":310.71},{"g":193,"bestF":248,"avgF":304.28},{"g":194,"bestF":248,"avgF":314.29},{"g":195,"bestF":248,"avgF":302.03},{"g":196,"bestF":248,"avgF":291.63},{"g":197,"bestF":248,"avgF":288.06},{"g":198,"bestF":248,"avgF":285.66},{"g":199,"bestF":248,"avgF":284.72},{"g":200,"bestF":248,"avgF":289.62},{"g":201,"bestF":248,"avgF":280.02},{"g":202,"bestF":248,"avgF":276.88},{"g":203,"bestF":248,"avgF":287.34},{"g":204,"bestF":248,"avgF":291.05},{"g":205,"bestF":248,"avgF":294.47},{"g":206,"bestF":248,"avgF":292.03},{"g":207,"bestF":248,"avgF":294.21},{"g":208,"bestF":248,"avgF":294.38},{"g":209,"bestF":248,"avgF":290.86},{"g":210,"bestF":248,"avgF":295.19},{"g":211,"bestF":248,"avgF":297.5},{"g":212,"bestF":248,"avgF":302.76},{"g":213,"bestF":248,"avgF":307.91},{"g":214,"bestF":248,"avgF":321.38},{"g":215,"bestF":248,"avgF":314.39},{"g":216,"bestF":248,"avgF":311.31},{"g":217,"bestF":248,"avgF":313.61},{"g":218,"bestF":248,"avgF":309.14},{"g":219,"bestF":248,"avgF":312.31},{"g":220,"bestF":248,"avgF":306.83},{"g":221,"bestF":245,"avgF":306.22},{"g":222,"bestF":245,"avgF":300.73},{"g":223,"bestF":245,"avgF":295.76},{"g":224,"bestF":245,"avgF":300.5},{"g":225,"bestF":245,"avgF":296.57},{"g":226,"bestF":245,"avgF":292.21},{"g":227,"bestF":245,"avgF":291.97},{"g":228,"bestF":245,"avgF":288.29},{"g":229,"bestF":245,"avgF":293.3},{"g":230,"bestF":245,"avgF":295.57},{"g":231,"bestF":245,"avgF":300.65},{"g":232,"bestF":245,"avgF":292.95},{"g":233,"bestF":245,"avgF":291.93},{"g":234,"bestF":245,"avgF":303.7},{"g":235,"bestF":245,"avgF":298.5},{"g":236,"bestF":245,"avgF":301.63},{"g":237,"bestF":245,"avgF":296.46},{"g":238,"bestF":245,"avgF":294.5},{"g":239,"bestF":245,"avgF":296.28},{"g":240,"bestF":245,"avgF":296.99},{"g":241,"bestF":245,"avgF":300.41},{"g":242,"bestF":245,"avgF":295.85},{"g":243,"bestF":245,"avgF":289.23},{"g":244,"bestF":245,"avgF":285.36},{"g":245,"bestF":245,"avgF":281.93},{"g":246,"bestF":245,"avgF":277.55},{"g":247,"bestF":245,"avgF":279.38},{"g":248,"bestF":245,"avgF":281.87},{"g":249,"bestF":245,"avgF":283.27},{"g":250,"bestF":245,"avgF":289.77},{"g":251,"bestF":245,"avgF":297.11},{"g":252,"bestF":245,"avgF":301.32},{"g":253,"bestF":245,"avgF":295.67},{"g":254,"bestF":245,"avgF":297.23},{"g":255,"bestF":245,"avgF":299.81},{"g":256,"bestF":245,"avgF":308.6},{"g":257,"bestF":245,"avgF":304.91},{"g":258,"bestF":245,"avgF":305.29},{"g":259,"bestF":245,"avgF":300.42},{"g":260,"bestF":245,"avgF":303.84},{"g":261,"bestF":245,"avgF":301.2},{"g":262,"bestF":245,"avgF":297.9},{"g":263,"bestF":245,"avgF":297.83},{"g":264,"bestF":245,"avgF":297.99},{"g":265,"bestF":245,"avgF":304.44},{"g":266,"bestF":245,"avgF":295.76},{"g":267,"bestF":245,"avgF":294.37},{"g":268,"bestF":245,"avgF":293.55},{"g":269,"bestF":245,"avgF":299.11},{"g":270,"bestF":245,"avgF":304.11},{"g":271,"bestF":245,"avgF":301.84},{"g":272,"bestF":245,"avgF":300.79},{"g":273,"bestF":245,"avgF":306.06},{"g":274,"bestF":245,"avgF":301.11},{"g":275,"bestF":245,"avgF":305.78},{"g":276,"bestF":245,"avgF":301.98},{"g":277,"bestF":245,"avgF":310.88},{"g":278,"bestF":245,"avgF":311.17},{"g":279,"bestF":245,"avgF":315.99},{"g":280,"bestF":245,"avgF":319.72},{"g":281,"bestF":245,"avgF":304.15},{"g":282,"bestF":245,"avgF":302.24},{"g":283,"bestF":245,"avgF":304.29},{"g":284,"bestF":245,"avgF":315.47},{"g":285,"bestF":245,"avgF":307.3},{"g":286,"bestF":245,"avgF":312.47},{"g":287,"bestF":245,"avgF":316.14},{"g":288,"bestF":245,"avgF":313.14},{"g":289,"bestF":245,"avgF":310.44},{"g":290,"bestF":245,"avgF":309.47},{"g":291,"bestF":245,"avgF":322.51},{"g":292,"bestF":245,"avgF":328.77},{"g":293,"bestF":245,"avgF":329.24},{"g":294,"bestF":245,"avgF":341.93},{"g":295,"bestF":245,"avgF":324.55},{"g":296,"bestF":245,"avgF":322.96},{"g":297,"bestF":245,"avgF":331.34},{"g":298,"bestF":245,"avgF":333.68},{"g":299,"bestF":245,"avgF":328.28},{"g":300,"bestF":245,"avgF":318.97},{"g":301,"bestF":245,"avgF":317.19},{"g":302,"bestF":245,"avgF":326.75},{"g":303,"bestF":245,"avgF":321.41},{"g":304,"bestF":245,"avgF":324.39},{"g":305,"bestF":245,"avgF":326.81},{"g":306,"bestF":245,"avgF":325.21},{"g":307,"bestF":245,"avgF":325.07},{"g":308,"bestF":245,"avgF":329.76},{"g":309,"bestF":245,"avgF":325.36},{"g":310,"bestF":245,"avgF":322.13},{"g":311,"bestF":245,"avgF":331.71},{"g":312,"bestF":245,"avgF":340.4},{"g":313,"bestF":245,"avgF":323.05},{"g":314,"bestF":245,"avgF":323.56},{"g":315,"bestF":245,"avgF":318.64},{"g":316,"bestF":245,"avgF":307.59},{"g":317,"bestF":245,"avgF":311.94},{"g":318,"bestF":245,"avgF":307.21},{"g":319,"bestF":245,"avgF":305.03},{"g":320,"bestF":245,"avgF":302.17},{"g":321,"bestF":245,"avgF":301.54},{"g":322,"bestF":245,"avgF":300.04},{"g":323,"bestF":245,"avgF":306.34},{"g":324,"bestF":245,"avgF":305.77},{"g":325,"bestF":245,"avgF":305.88},{"g":326,"bestF":245,"avgF":317.27},{"g":327,"bestF":245,"avgF":314.87},{"g":328,"bestF":245,"avgF":315.93},{"g":329,"bestF":245,"avgF":316.27},{"g":330,"bestF":245,"avgF":318.63},{"g":331,"bestF":245,"avgF":319.27},{"g":332,"bestF":245,"avgF":310.37},{"g":333,"bestF":245,"avgF":307.43},{"g":334,"bestF":245,"avgF":304.58},{"g":335,"bestF":245,"avgF":300.73},{"g":336,"bestF":245,"avgF":308.02},{"g":337,"bestF":245,"avgF":298.23},{"g":338,"bestF":245,"avgF":300.8},{"g":339,"bestF":245,"avgF":299.31},{"g":340,"bestF":245,"avgF":299.16},{"g":341,"bestF":245,"avgF":301.85},{"g":342,"bestF":245,"avgF":293.6},{"g":343,"bestF":245,"avgF":302.38},{"g":344,"bestF":245,"avgF":293.56},{"g":345,"bestF":243,"avgF":294.66},{"g":346,"bestF":243,"avgF":295.74},{"g":347,"bestF":243,"avgF":298.49},{"g":348,"bestF":243,"avgF":292.22},{"g":349,"bestF":243,"avgF":284.14},{"g":350,"bestF":243,"avgF":284.38},{"g":351,"bestF":243,"avgF":290.03},{"g":352,"bestF":243,"avgF":290.82},{"g":353,"bestF":243,"avgF":288.44},{"g":354,"bestF":243,"avgF":288.82},{"g":355,"bestF":243,"avgF":292.15},{"g":356,"bestF":243,"avgF":296.19},{"g":357,"bestF":243,"avgF":291.76},{"g":358,"bestF":243,"avgF":301.12},{"g":359,"bestF":243,"avgF":296.8},{"g":360,"bestF":243,"avgF":293.24},{"g":361,"bestF":243,"avgF":298.69},{"g":362,"bestF":243,"avgF":296.76},{"g":363,"bestF":243,"avgF":302.8},{"g":364,"bestF":243,"avgF":308.68},{"g":365,"bestF":243,"avgF":308.44},{"g":366,"bestF":243,"avgF":311.89},{"g":367,"bestF":243,"avgF":310.35},{"g":368,"bestF":243,"avgF":313.68},{"g":369,"bestF":243,"avgF":312.74},{"g":370,"bestF":243,"avgF":312.89},{"g":371,"bestF":243,"avgF":320.56},{"g":372,"bestF":243,"avgF":326.55},{"g":373,"bestF":243,"avgF":319.65},{"g":374,"bestF":243,"avgF":317},{"g":375,"bestF":243,"avgF":319.19},{"g":376,"bestF":243,"avgF":312.27},{"g":377,"bestF":243,"avgF":315.3},{"g":378,"bestF":243,"avgF":309.29},{"g":379,"bestF":243,"avgF":307.85},{"g":380,"bestF":243,"avgF":317.27},{"g":381,"bestF":243,"avgF":323.3},{"g":382,"bestF":243,"avgF":324.68},{"g":383,"bestF":243,"avgF":338.93},{"g":384,"bestF":243,"avgF":338.55},{"g":385,"bestF":243,"avgF":347.96},{"g":386,"bestF":243,"avgF":351.22},{"g":387,"bestF":243,"avgF":339.33},{"g":388,"bestF":243,"avgF":331.53},{"g":389,"bestF":243,"avgF":323.51},{"g":390,"bestF":243,"avgF":335.35},{"g":391,"bestF":243,"avgF":313.67},{"g":392,"bestF":243,"avgF":333.78},{"g":393,"bestF":243,"avgF":334.66},{"g":394,"bestF":243,"avgF":330.11},{"g":395,"bestF":243,"avgF":332.74},{"g":396,"bestF":243,"avgF":329.37},{"g":397,"bestF":243,"avgF":321.24},{"g":398,"bestF":243,"avgF":321.47},{"g":399,"bestF":243,"avgF":325.46}];
+  var REF_VALUE = 243;
+
+  var svg = document.getElementById('chart');
+  var tooltip = document.getElementById('tooltip');
+  var ns = 'http://www.w3.org/2000/svg';
+
+  var W = 900, H = 420;
+  var margin = { top: 16, right: 16, bottom: 34, left: 46 };
+  var plotW = W - margin.left - margin.right;
+  var plotH = H - margin.top - margin.bottom;
+
+  var xs = HISTORY.map(function (d) { return d.g; });
+  var allY = HISTORY.reduce(function (acc, d) { acc.push(d.bestF, d.avgF); return acc; }, []);
+  var yMin = Math.min.apply(null, allY.concat([REF_VALUE])) - 10;
+  var yMax = Math.max.apply(null, allY) + 10;
+  var xMin = 0, xMax = xs[xs.length - 1];
+
+  function sx(g) { return margin.left + (g - xMin) / (xMax - xMin) * plotW; }
+  function sy(v) { return margin.top + (1 - (v - yMin) / (yMax - yMin)) * plotH; }
+
+  function el(tag, attrs) {
+    var e = document.createElementNS(ns, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  // gridlines + y axis labels (4 steps)
+  var ySteps = 4;
+  for (var i = 0; i <= ySteps; i++) {
+    var v = yMin + (yMax - yMin) * (i / ySteps);
+    var y = sy(v);
+    svg.appendChild(el('line', { x1: margin.left, x2: W - margin.right, y1: y, y2: y, class: 'grid-line' }));
+    var lbl = el('text', { x: margin.left - 8, y: y + 4, class: 'axis-label', 'text-anchor': 'end' });
+    lbl.textContent = Math.round(v);
+    svg.appendChild(lbl);
+  }
+
+  // x axis labels
+  var xSteps = 8;
+  for (var j = 0; j <= xSteps; j++) {
+    var g = Math.round(xMin + (xMax - xMin) * (j / xSteps));
+    var x = sx(g);
+    var lblx = el('text', { x: x, y: H - margin.bottom + 18, class: 'axis-label', 'text-anchor': 'middle' });
+    lblx.textContent = g;
+    svg.appendChild(lblx);
+  }
+  var xTitle = el('text', { x: margin.left + plotW / 2, y: H - 4, class: 'axis-label', 'text-anchor': 'middle' });
+  xTitle.textContent = 'Поколение';
+  svg.appendChild(xTitle);
+
+  // axis lines
+  svg.appendChild(el('line', { x1: margin.left, x2: margin.left, y1: margin.top, y2: H - margin.bottom, class: 'axis-line' }));
+  svg.appendChild(el('line', { x1: margin.left, x2: W - margin.right, y1: H - margin.bottom, y2: H - margin.bottom, class: 'axis-line' }));
+
+  // reference line (WSPT optimum)
+  var refY = sy(REF_VALUE);
+  svg.appendChild(el('line', { x1: margin.left, x2: W - margin.right, y1: refY, y2: refY, class: 'ref-line' }));
+  var refLabel = el('text', { x: W - margin.right, y: refY - 6, class: 'ref-label', 'text-anchor': 'end' });
+  refLabel.textContent = 'WSPT = ' + REF_VALUE;
+  svg.appendChild(refLabel);
+
+  function path(key) {
+    return HISTORY.map(function (d, i) {
+      return (i === 0 ? 'M' : 'L') + sx(d.g).toFixed(1) + ',' + sy(d[key]).toFixed(1);
+    }).join(' ');
+  }
+
+  svg.appendChild(el('path', { d: path('avgF'), fill: 'none', stroke: 'var(--series-2)', 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+  svg.appendChild(el('path', { d: path('bestF'), fill: 'none', stroke: 'var(--series-1)', 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+
+  // end markers
+  var last = HISTORY[HISTORY.length - 1];
+  [['bestF', 'var(--series-1)'], ['avgF', 'var(--series-2)']].forEach(function (pair) {
+    var cx = sx(last.g), cy = sy(last[pair[0]]);
+    svg.appendChild(el('circle', { cx: cx, cy: cy, r: 6, fill: 'var(--surface-1)' }));
+    svg.appendChild(el('circle', { cx: cx, cy: cy, r: 4, fill: pair[1] }));
+  });
+
+  // hover layer
+  var crosshair = el('line', { x1: 0, x2: 0, y1: margin.top, y2: H - margin.bottom, class: 'crosshair', opacity: 0 });
+  svg.appendChild(crosshair);
+  var dotBest = el('circle', { r: 5, fill: 'var(--series-1)', class: 'dot-ring', opacity: 0 });
+  var dotBestRing = el('circle', { r: 5, fill: 'none', stroke: 'var(--surface-1)', 'stroke-width': 2, opacity: 0 });
+  var dotAvg = el('circle', { r: 5, fill: 'var(--series-2)', opacity: 0 });
+  var dotAvgRing = el('circle', { r: 5, fill: 'none', stroke: 'var(--surface-1)', 'stroke-width': 2, opacity: 0 });
+  svg.appendChild(dotBest); svg.appendChild(dotBestRing);
+  svg.appendChild(dotAvg); svg.appendChild(dotAvgRing);
+
+  var hitRect = el('rect', { x: margin.left, y: margin.top, width: plotW, height: plotH, fill: 'transparent' });
+  svg.appendChild(hitRect);
+
+  function showAt(clientX, svgRect) {
+    var px = clientX - svgRect.left;
+    var scale = W / svgRect.width;
+    var gx = (px * scale - margin.left) / plotW * (xMax - xMin) + xMin;
+    var idx = Math.max(0, Math.min(HISTORY.length - 1, Math.round(gx)));
+    var d = HISTORY[idx];
+    var x = sx(d.g);
+    [crosshair].forEach(function (n) { n.setAttribute('x1', x); n.setAttribute('x2', x); n.setAttribute('opacity', 1); });
+    var yBest = sy(d.bestF), yAvg = sy(d.avgF);
+    dotBest.setAttribute('cx', x); dotBest.setAttribute('cy', yBest); dotBest.setAttribute('opacity', 1);
+    dotBestRing.setAttribute('cx', x); dotBestRing.setAttribute('cy', yBest); dotBestRing.setAttribute('opacity', 1);
+    dotAvg.setAttribute('cx', x); dotAvg.setAttribute('cy', yAvg); dotAvg.setAttribute('opacity', 1);
+    dotAvgRing.setAttribute('cx', x); dotAvgRing.setAttribute('cy', yAvg); dotAvgRing.setAttribute('opacity', 1);
+
+    tooltip.innerHTML = '';
+    var title = document.createElement('div');
+    title.className = 'row';
+    title.innerHTML = '<span class="lbl">Поколение</span>';
+    var titleVal = document.createElement('span');
+    titleVal.className = 'val';
+    titleVal.style.marginLeft = 'auto';
+    titleVal.textContent = String(d.g);
+    title.appendChild(titleVal);
+    tooltip.appendChild(title);
+
+    [['Лучшее', d.bestF, 'var(--series-1)'], ['Среднее', d.avgF, 'var(--series-2)']].forEach(function (r) {
+      var row = document.createElement('div');
+      row.className = 'row';
+      var key = document.createElement('span');
+      key.className = 'key';
+      key.style.background = r[2];
+      row.appendChild(key);
+      var lbl = document.createElement('span');
+      lbl.className = 'lbl';
+      lbl.textContent = r[0];
+      row.appendChild(lbl);
+      var val = document.createElement('span');
+      val.className = 'val';
+      val.style.marginLeft = 'auto';
+      val.textContent = r[1];
+      row.appendChild(val);
+      tooltip.appendChild(row);
+    });
+
+    var svgRectNow = svg.getBoundingClientRect();
+    tooltip.style.left = (svgRectNow.left - svgRectNow.left + x / scale) + 'px';
+    tooltip.style.top = (yBest / scale) + 'px';
+    tooltip.classList.add('visible');
+  }
+
+  hitRect.addEventListener('pointermove', function (ev) {
+    showAt(ev.clientX, svg.getBoundingClientRect());
+  });
+  hitRect.addEventListener('pointerleave', function () {
+    crosshair.setAttribute('opacity', 0);
+    dotBest.setAttribute('opacity', 0); dotBestRing.setAttribute('opacity', 0);
+    dotAvg.setAttribute('opacity', 0); dotAvgRing.setAttribute('opacity', 0);
+    tooltip.classList.remove('visible');
+  });
+
+  // --- Baseline comparison bars ---
+  var BARS = [
+  {
+    name: "ГА (лучшая особь)",
+    value: 243
+  },
+  {
+    name: "WSPT (правило Смита)",
+    value: 243
+  },
+  {
+    name: "Priority Scheduling",
+    value: 252
+  },
+  {
+    name: "SJF",
+    value: 260
+  },
+  {
+    name: "Round Robin (q=1)",
+    value: 363
+  },
+  {
+    name: "FCFS",
+    value: 386
+  }
+];
+  var barsRoot = document.getElementById('bars');
+  var maxVal = Math.max.apply(null, BARS.map(function (b) { return b.value; }));
+  BARS.forEach(function (b) {
+    var row = document.createElement('div');
+    row.className = 'bar-row';
+    var name = document.createElement('div');
+    name.className = 'bar-name';
+    name.textContent = b.name;
+    var track = document.createElement('div');
+    track.className = 'bar-track';
+    var fill = document.createElement('div');
+    fill.className = 'bar-fill';
+    fill.style.width = (b.value / maxVal * 100) + '%';
+    track.appendChild(fill);
+    var value = document.createElement('div');
+    value.className = 'bar-value';
+    value.textContent = b.value;
+    row.appendChild(name);
+    row.appendChild(track);
+    row.appendChild(value);
+    barsRoot.appendChild(row);
+  });
+})();
+</script>
