@@ -4,11 +4,13 @@
 к планированию процессов на одном процессоре. Критерий — взвешенная сумма моментов завершения
 `F(x) = Σ qᵢCᵢ → min`; хромосома — само расписание по квантам CPU. Для этой модели точный ответ даёт
 правило Смита (WSPT), поэтому оно служит эталоном для проверки ГА. Основной результат — презентация и
-доклад; программа в `demo/` лишь иллюстрирует теорию реальными числами. Формальная постановка — в `CLAUDE.md`.
+доклад; ноутбук `main.ipynb` иллюстрирует теорию реальными числами. Формальная постановка — в `CLAUDE.md`.
 
 ## Структура
 
 ```
+main.ipynb                 ГА пошагово: от особи до полного прогона, графики, сравнение, самопроверки
+requirements.txt           зависимости ноутбука
 docs/
   research_notes.md        источники: ГА в планировании, операторы (GOX), классические алгоритмы, ОС
   ga_theory_notes.md       теория ГА по конспекту лекций курса
@@ -16,35 +18,31 @@ talk/
   presentation_script.md   план слайдов
   speech.md                полный текст выступления
 demo/
-  js/                      ГА, базовые алгоритмы, запуск демо, сравнение отборов, рендер графиков
-  py/                      пошаговый разбор первой половины ГА, проверки правила Смита, давление отбора
-  data/                    результаты запусков (convergence.json, *_data.js)
-  charts/                  HTML-графики и отрендеренные SVG/PNG для слайдов
+  charts/                  отдельные графики для слайдов (HTML открываются в браузере, SVG/PNG)
 ```
 
-## Запуск
+## Ноутбук
 
-Нужны только [Node.js](https://nodejs.org/) и [Python 3](https://www.python.org/downloads/) любой актуальной версии
-(проверено на Node 24 и Python 3.14). Сторонних библиотек нет, `npm install` и `pip install` не нужны.
-Проверить установку: `node --version`, `python --version` (на Linux/macOS команда может называться `python3`).
-Для PNG в `render_charts.js` нужен Chromium в PATH, без него создаются только SVG.
-Команды выполняются из корня репозитория.
+`main.ipynb` — каждый шаг ГА (особь, популяция, выбор родителей рулеткой, кроссовер GOX, мутация, новое
+поколение) с кодом, пояснением и картинкой, затем полный прогон, сравнение с FCFS/SJF/Priority/Round
+Robin/WSPT и самопроверки. Результаты уже сохранены в файле — его можно просто открыть на GitHub.
 
-```sh
-node demo/js/run_demo.js            # ГА на 6 процессах, сравнение с FCFS/SJF/Priority/RR/WSPT → demo/data/convergence.json
-node demo/js/compare_selection.js   # три схемы отбора, ~1.5 мин → demo/data/selection_compare_data.js
-node demo/js/render_charts.js       # графики отбора → demo/charts/*.svg, *.png
+Запустить самому:
+- **без установки** — [открыть в Colab](https://colab.research.google.com/github/ada-dmitry/genalgo_processor/blob/main/main.ipynb)
+  и выбрать «Среда выполнения → Выполнить все»;
+- **локально** — нужен [Python 3](https://www.python.org/downloads/) (проверено на 3.14):
 
-python demo/py/ga_model.py          # пошаговая трассировка; --check — самопроверки
-python demo/py/check_wspt.py        # проверки правила Смита на случайных примерах
-python demo/py/selection_pressure.py  # → demo/data/selection_pressure_data.js
-```
+  ```sh
+  pip install -r requirements.txt
+  jupyter notebook main.ipynb
+  ```
+
+  Или открыть файл в VS Code с расширением Jupyter. Полный прогон всех ячеек — около 20 секунд.
 
 Сама презентация (pptx и HTML-версия) ведётся отдельно и в репозиторий не входит — `presentation/` в
 `.gitignore`.
 
 ## Захардкоженные числа
 
-Результаты демо вписаны вручную в `demo/charts/convergence_chart.html`, `talk/presentation_script.md`,
-`talk/speech.md` и в презентацию. При смене тестового набора или параметров ГА их
-нужно обновить руками во всех этих местах.
+Графики в `demo/charts/` и числа в `talk/*.md` получены прежней JS-версией демо (удалена) и вписаны
+вручную; с результатами `main.ipynb` они пока не сверены.

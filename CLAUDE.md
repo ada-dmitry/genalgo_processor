@@ -38,26 +38,27 @@ This is primarily a **research/presentation project**, not a software product:
 
 Лучшая особь популяции — найденное расписание.
 
-**Критерий остановки:** `g ≥ G_max`, либо `fitness_best` не улучшается `K` поколений подряд. В демо (`runGA`) реализован только первый пункт.
+**Критерий остановки:** `g ≥ G_max`, либо `fitness_best` не улучшается `K` поколений подряд. В `main.ipynb` (`run_ga`) реализованы оба; `K` по умолчанию выключен (`stall_generations=None`).
 
 **Важное следствие модели (не подавать иначе):** `F(x) = ΣqᵢEᵢ + Σqᵢ·ioᵢ`, второе слагаемое от расписания не зависит, поэтому I/O порядок не меняет, а задача — это классическая `1||ΣwⱼCⱼ`, решаемая **точно** правилом Смита / WSPT (оптимально и среди вытесняющих расписаний). ГА для *этой* модели не нужен; его роль — универсальный метод, не опирающийся на структуру `F` (переносится на усложнённые постановки), плюс валидация по точному эталону. См. `docs/research_notes.md` §0.
 
 ## Repository layout
 
 ```
+main.ipynb            the whole GA in Python, step by step, with plots and self-checks
+requirements.txt      notebook deps (matplotlib, notebook)
 docs/                 research_notes.md, ga_theory_notes.md — source material
 talk/                 presentation_script.md, speech.md — slide outline and full speech
-demo/
-  js/                 scheduler_ga.js, run_demo.js, compare_selection.js, render_charts.js
-  py/                 ga_model.py, check_wspt.py, selection_pressure.py
-  data/               convergence.json, selection_compare_data.js, selection_pressure_data.js
-  charts/             *_chart.html + rendered *.svg / *.png
+demo/charts/          standalone charts for slides: *_chart.html (data inlined) + *.svg / *.png
 ```
 
-Requirements: any current Node.js and Python 3 (tested on Node 24, Python 3.14), no third-party
-packages. The project is shared with teammates who don't use Nix — don't mention Nix in user-facing docs
-(README, script docstrings); `flake.nix` is only the author's local convenience. All commands below run from the repo root.
-No build/lint/test tooling beyond the demo scripts themselves.
+Requirements: Python 3 with `requirements.txt`; tested on Python 3.14. The project is shared with
+teammates who don't use Nix — don't mention Nix in user-facing docs (README, notebook); `flake.nix` is
+only the author's local convenience (its devShell has python with the notebook deps; treefmt runs ruff on
+the `.ipynb` too). The test is executing the notebook end to end:
+`jupyter nbconvert --to notebook --execute --inplace main.ipynb` (~20 s; its last cell asserts everything).
+The JS demo (`demo/js/`, `demo/data/`) and the older `demo/py/` scripts were removed — the notebook is
+the only implementation.
 
 The presentation itself (the team's pptx and an HTML deck) is maintained by a separate person and is **not
 in the repository**: a local `presentation/` directory may exist but is git-ignored (as is `*.pptx`), and
@@ -90,60 +91,37 @@ Read both before writing report/presentation content or changing GA operators.
 - `talk/presentation_script.md` — per-slide visual plan of the original 13-slide outline (audience: not
   CS specialists; overview depth, no proofs). Keep it and `speech.md` in sync.
 
-## Demo program
+## Notebook (`main.ipynb`)
 
-Illustrative, not production code; backs the results slide with real numbers.
+Illustrative, not production code; backs the results slide with real numbers. Russian markdown for
+non-CS readers. Sections: problem → individual → objective/fitness → population → parent selection
+(**proportional roulette only**, parents must differ — the user chose to drop the shifted/rank comparison)
+→ GOX (Bierwirth 1995; copies a segment of parent A in place, fills the rest from B in order; preserves the
+`pᵢ`-count invariant) → swap/insertion/reversal mutation → next generation (elitism 2) +
+`StoppingCriterion` → `run_ga` → FCFS/SJF/Priority/Round Robin (quantum 1)/WSPT + brute force over all
+`n!` block orders, convergence plot, Gantt charts, 20 seeds → self-checks (model, roulette frequencies,
+operator validity, elitism, Smith's rule vs brute force incl. all chromosomes for tiny H, I/O shift).
+Committed **with outputs** (GitHub renders them; Colab badge in the first cell) — re-execute before
+committing after any change. Plots are matplotlib; tables are markdown via `show_table`.
 
-- `demo/js/scheduler_ga.js` — the model (chromosome = schedule, no decoding), `objective`/`fitness`,
-  **GOX crossover** (Bierwirth 1995; preserves the `pᵢ`-count invariant), swap/insertion/reversal
-  mutation, selection with elitism, baselines (FCFS by id, SJF, Priority, WSPT/Smith, Round Robin
-  quantum 1), `bruteForceOptimal` (all `n!` process orders — exact for small `n`). `runGA` takes
-  `selection: 'proportional' | 'shifted' | 'rank'` (default `proportional`).
-- `demo/js/run_demo.js` (`node demo/js/run_demo.js`) — GA on the fixed 6-process set, comparison table and
-  validation checks (brute force; WSPT vs brute force; `ioᵢ=0` case where brute force, WSPT and GA agree;
-  I/O shift of `F` = `Σqᵢ·ioᵢ`). Writes `demo/data/convergence.json`.
-- `demo/js/compare_selection.js` (`node demo/js/compare_selection.js`, ~1.5 min) — the three selection
-  schemes on the 6-process set and on 50 random processes with `p≤100` (H=2713), 5 seeds →
-  `demo/data/selection_compare_data.js`, plotted by `demo/charts/selection_generations_chart.html`.
-- `demo/js/render_charts.js` (`node demo/js/render_charts.js`) — renders both selection charts as static
-  light-theme `demo/charts/*.svg` and 2× `*.png` (headless chromium if in PATH) for slides; rerun after
-  regenerating data files.
-- `demo/py/ga_model.py` — stdlib Python port of the first half of the GA (model, population, validity,
-  fitness, stopping criterion, roulette parent selection); prints a step-by-step trace (`--size M`,
-  `--random N --p-max P`, `--seed S`), `--check` runs self-checks. Crossover/mutation/survivor selection
-  not ported. `rank_probabilities` is not wired into `select_parents` — fitness/selection choice is the
-  user's call.
-- `demo/py/check_wspt.py` — batch checks of Smith's rule on random instances (block-order brute force,
-  exhaustive chromosome enumeration for tiny H, random individuals ≥ WSPT, I/O shift = Σqᵢ·ioᵢ).
-- `demo/py/selection_pressure.py` — selection pressure `M·Pr(best)` of proportional (`1/(1+F)`), shifted
-  (`F_max−F`) and linear-rank selection vs the scale of `pᵢ` (50 processes, `p≤10…10000`) →
-  `demo/data/selection_pressure_data.js`, plotted by `demo/charts/selection_pressure_chart.html`.
-- `demo/charts/convergence_chart.html` — convergence + baseline bars for the results slide (published as a
-  Claude Artifact); its history array is **inlined**, regenerate after changing the test set or GA params.
+**Settings:** population 60, 400 generations, `Pc=0.85`, mutation probability 0.2, elitism 2, seed 2.
+Test set: `p=(5,2,8,1,4,3)`, `io=(3,5,1,4,2,6)`, `q=(5,1,2,6,3,4)`, H=23 — deliberately decorrelated
+so FCFS/SJF/Priority/WSPT give different orders.
 
-Python: `python demo/py/ga_model.py [--check]`.
-
-**Tuned settings** (`run_demo.js`): population 60, 400 generations, `Pc=0.85`, mutation probability 0.2,
-elitism 2, seed 2. The test set's `p`/`io`/`q` are deliberately decorrelated so FCFS/SJF/Priority/WSPT give
-different orders (an earlier `q_i = 7 - p_i` made SJF/Priority/WSPT coincide).
-
-**Validated result:** brute force over all `6!=720` orders gives `F=243`; WSPT gives 243 (exact, not a
-coincidence); the GA (seed 2) finds 243 only at generation 345 of 400. Seeds 1..20: 10 of 20 reach 243,
-the rest end at 244–248 — the GA gives no optimum guarantee, say so in the talk. Priority 252, SJF 260,
-Round Robin 363, FCFS 386. With `ioᵢ=0` brute force, WSPT and GA all give `F=167`; 243−167=76 = `Σqᵢ·ioᵢ`.
-
-**Selection findings:** proportional selection on `1/(1+F)` degenerates to random choice as `p` grows
-(pressure 1.06× → 1.003×); scaling fitness by a constant cancels out; rank selection stays at 2×. On
-6 processes shifted/rank reach the optimum on all seeds, proportional ends at +0.66 % on average; on 50
-processes after 400 generations the gap to WSPT is still 145 % (proportional) / 138 % (shifted) / 125 %
-(rank) — the GA is far from Smith's rule at this chromosome length.
+**Result:** brute force over `6!=720` orders gives `F=243`; WSPT gives 243 (exact, not a coincidence).
+Priority 252, SJF 260, Round Robin 363, FCFS 386. The GA (seed 2) ends at **248** (+2.1 %), found at
+generation 332; over seeds 1..20 it reaches 243 in 6 of 20 runs, mean 247.0, worst 258 — the GA gives no
+optimum guarantee, say so in the talk. Cause: with `fitness = 1/(1+F)` all individuals get nearly equal
+roulette sectors (11–14 % in a population of 8), so selection pressure is weak. With `ioᵢ=0` the optimum
+is 167; 243−167=76 = `Σqᵢ·ioᵢ`.
 
 ## Open items
 
-- Numbers are hardcoded in several places: `demo/charts/convergence_chart.html`,
-  `talk/presentation_script.md`, `talk/speech.md` (and the out-of-repo presentation).
-  Changing the test set or GA parameters means updating all of them by hand.
+- `talk/*.md` and `demo/charts/*` still carry numbers from the removed JS demo (e.g. «GA finds 243 at
+  generation 345», «10 of 20 seeds», the shifted/rank selection comparison and the 50-process experiment).
+  They are **not** reproducible from `main.ipynb` and must be adapted to it later — the user asked not to
+  touch `talk/` yet. The out-of-repo presentation has the same numbers.
 - Release times `rᵢ` were tried and abandoned: the model briefly had per-process arrival times (priority-list
   chromosome, non-preemptive `decode()`, idle time, online baselines); everything was reverted to
-  chromosome = schedule across `demo/`, talk and docs. This is why the "why GA" argument is
+  chromosome = schedule across the demo, talk and docs. This is why the "why GA" argument is
   framed as universality (see "Важное следствие модели").

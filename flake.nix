@@ -25,14 +25,16 @@
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
 
-      # ruff — для demo/py, nixfmt — для самого flake.nix.
-      # JS/HTML-форматтер не подключён: prettier и biome переформатировали бы
-      # весь demo/js и demo/charts/*.html.
+      # ruff — для ноутбука main.ipynb, nixfmt — для самого flake.nix.
+      # HTML-форматтер не подключён: prettier переформатировал бы demo/charts/*.html.
       treefmtEval = treefmt-nix.lib.evalModule pkgs {
         projectRootFile = "flake.nix";
         programs.ruff-format.enable = true;
         programs.ruff-check.enable = true;
         programs.nixfmt.enable = true;
+        # ноутбук тоже форматируем и проверяем (по умолчанию ruff в treefmt — только *.py)
+        settings.formatter.ruff-format.includes = [ "*.ipynb" ];
+        settings.formatter.ruff-check.includes = [ "*.ipynb" ];
       };
 
       # Ставится shellHook'ом при входе в devShell.
@@ -50,17 +52,22 @@
       checks.${system}.pre-commit-check = preCommitCheck;
 
       devShells.${system}.default = pkgs.mkShell {
-        # demo/js — чистый Node без npm-зависимостей, demo/py — только stdlib.
-        # Для PNG в demo/js/render_charts.js нужен chromium на PATH — берётся
-        # системный, сюда не добавлен ради размера closure.
+        # Jupyter и matplotlib — как в requirements.txt; nbconvert — чтобы выполнить
+        # main.ipynb целиком.
         packages = with pkgs; [
-          nodejs
-          python3
+          (python3.withPackages (
+            ps: with ps; [
+              matplotlib
+              notebook
+              nbconvert
+              ipykernel
+            ]
+          ))
         ];
 
         shellHook = ''
           ${preCommitCheck.shellHook}
-          echo "node $(node --version), $(python3 --version)"
+          echo "$(python3 --version), jupyter $(jupyter notebook --version)"
         '';
       };
     };
