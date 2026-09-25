@@ -7,7 +7,7 @@
   3. Случайные особи на больших наборах: F(x) >= F(WSPT) (нижняя граница).
   4. Сдвиг из-за I/O: F(x) - F(x при ioᵢ=0) = Σqᵢ·ioᵢ для любой особи.
 
-Запуск: nix-shell -p python3 --run "python demo/py/check_wspt.py [--seed S] [--instances K]"
+Запуск: python demo/py/check_wspt.py [--seed S] [--instances K]
 """
 
 from __future__ import annotations

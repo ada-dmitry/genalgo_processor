@@ -20,12 +20,14 @@ demo/
   py/                      пошаговый разбор первой половины ГА, проверки правила Смита, давление отбора
   data/                    результаты запусков (convergence.json, *_data.js)
   charts/                  HTML-графики и отрендеренные SVG/PNG для слайдов
-flake.nix, .envrc          devShell с nodejs и python3
 ```
 
 ## Запуск
 
-Глобальных `node` и `python3` нет — войдите в devShell: `nix develop` (или автоматически через direnv).
+Нужны только [Node.js](https://nodejs.org/) и [Python 3](https://www.python.org/downloads/) любой актуальной версии
+(проверено на Node 24 и Python 3.14). Сторонних библиотек нет, `npm install` и `pip install` не нужны.
+Проверить установку: `node --version`, `python --version` (на Linux/macOS команда может называться `python3`).
+Для PNG в `render_charts.js` нужен Chromium в PATH, без него создаются только SVG.
 Команды выполняются из корня репозитория.
 
 ```sh
@@ -37,8 +39,6 @@ python demo/py/ga_model.py          # пошаговая трассировка;
 python demo/py/check_wspt.py        # проверки правила Смита на случайных примерах
 python demo/py/selection_pressure.py  # → demo/data/selection_pressure_data.js
 ```
-
-Без devShell Python-скрипты можно запустить через `nix-shell -p python3 --run "python demo/py/ga_model.py"`.
 
 Сама презентация (pptx и HTML-версия) ведётся отдельно и в репозиторий не входит — `presentation/` в
 `.gitignore`.

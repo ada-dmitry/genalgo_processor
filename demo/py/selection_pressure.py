@@ -8,7 +8,7 @@
 (например, нормировка на F_WSPT) вероятности не меняет — константа сокращается.
 
 Пишет demo/data/selection_pressure_data.js (window.SP_DATA) для selection_pressure_chart.html.
-Запуск: nix-shell -p python3 --run "python demo/py/selection_pressure.py"
+Запуск: python demo/py/selection_pressure.py
 """
 
 from __future__ import annotations

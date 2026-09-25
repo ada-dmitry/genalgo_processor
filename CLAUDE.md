@@ -52,11 +52,11 @@ demo/
   py/                 ga_model.py, check_wspt.py, selection_pressure.py
   data/               convergence.json, selection_compare_data.js, selection_pressure_data.js
   charts/             *_chart.html + rendered *.svg / *.png
-flake.nix, .envrc     devShell with nodejs + python3 (`nix develop` or direnv)
 ```
 
-No global `node`/`python3` on this machine: use the flake devShell (`nix develop` / direnv), or
-`nix-shell -p python3 --run "..."` for the Python scripts. All commands below run from the repo root.
+Requirements: any current Node.js and Python 3 (tested on Node 24, Python 3.14), no third-party
+packages. The project is shared with teammates who don't use Nix — don't mention Nix in user-facing docs
+(README, script docstrings); `flake.nix` is only the author's local convenience. All commands below run from the repo root.
 No build/lint/test tooling beyond the demo scripts themselves.
 
 The presentation itself (the team's pptx and an HTML deck) is maintained by a separate person and is **not
@@ -121,8 +121,7 @@ Illustrative, not production code; backs the results slide with real numbers.
 - `demo/charts/convergence_chart.html` — convergence + baseline bars for the results slide (published as a
   Claude Artifact); its history array is **inlined**, regenerate after changing the test set or GA params.
 
-Python: `python demo/py/ga_model.py [--check]` inside the devShell, or
-`nix-shell -p python3 --run "python demo/py/ga_model.py"`.
+Python: `python demo/py/ga_model.py [--check]`.
 
 **Tuned settings** (`run_demo.js`): population 60, 400 generations, `Pc=0.85`, mutation probability 0.2,
 elitism 2, seed 2. The test set's `p`/`io`/`q` are deliberately decorrelated so FCFS/SJF/Priority/WSPT give
