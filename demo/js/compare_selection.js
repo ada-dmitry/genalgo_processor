@@ -17,12 +17,12 @@ const SCHEMES = ['proportional', 'shifted', 'rank'];
 
 // копия тестового набора из run_demo.js
 const SMALL = [
-  { id: 1, p: 5, o: 3, q: 5 },
-  { id: 2, p: 2, o: 5, q: 1 },
-  { id: 3, p: 8, o: 1, q: 2 },
-  { id: 4, p: 1, o: 4, q: 6 },
-  { id: 5, p: 4, o: 2, q: 3 },
-  { id: 6, p: 3, o: 6, q: 4 },
+  { id: 1, p: 5, io: 3, q: 5 },
+  { id: 2, p: 2, io: 5, q: 1 },
+  { id: 3, p: 8, io: 1, q: 2 },
+  { id: 4, p: 1, io: 4, q: 6 },
+  { id: 5, p: 4, io: 2, q: 3 },
+  { id: 6, p: 3, io: 6, q: 4 },
 ];
 
 function randomProcesses(n, pMax, seed) {
@@ -30,7 +30,7 @@ function randomProcesses(n, pMax, seed) {
   return Array.from({ length: n }, (_, i) => ({
     id: i + 1,
     p: 1 + g.randInt(rng, pMax),
-    o: g.randInt(rng, 11),
+    io: g.randInt(rng, 11),
     q: 1 + g.randInt(rng, 10),
   }));
 }

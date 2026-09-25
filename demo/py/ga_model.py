@@ -23,11 +23,11 @@ from fractions import Fraction
 
 @dataclass(frozen=True)
 class Process:
-    """Процесс Pᵢ: id — номер 1..n, p>0 — кванты CPU, o>=0 — I/O, q>0 — приоритет (вес)."""
+    """Процесс Pᵢ: id — номер 1..n, p>0 — кванты CPU, io>=0 — I/O, q>0 — приоритет (вес)."""
 
     id: int
     p: int
-    o: int
+    io: int
     q: int
 
 
@@ -98,11 +98,11 @@ def is_valid(x: Sequence[int], processes: Sequence[Process]) -> bool:
 def completion_times(
     x: Sequence[int], processes: Sequence[Process]
 ) -> dict[int, tuple[int, int]]:
-    """{id: (Eᵢ, Cᵢ)}: Eᵢ — номер (с 1) последнего кванта Pᵢ, Cᵢ = Eᵢ + oᵢ."""
+    """{id: (Eᵢ, Cᵢ)}: Eᵢ — номер (с 1) последнего кванта Pᵢ, Cᵢ = Eᵢ + ioᵢ."""
     last: dict[int, int] = {}
     for t, i in enumerate(x, start=1):
         last[i] = t
-    return {pr.id: (last[pr.id], last[pr.id] + pr.o) for pr in processes}
+    return {pr.id: (last[pr.id], last[pr.id] + pr.io) for pr in processes}
 
 
 def objective(x: Sequence[int], processes: Sequence[Process]) -> int:
@@ -239,20 +239,20 @@ def random_processes(
     n: int,
     rng: random.Random,
     p_range: tuple[int, int] = (1, 10),
-    o_range: tuple[int, int] = (0, 10),
+    io_range: tuple[int, int] = (0, 10),
     q_range: tuple[int, int] = (1, 10),
 ) -> list[Process]:
-    """n процессов с id 1..n и равномерно случайными pᵢ, oᵢ, qᵢ из заданных диапазонов
+    """n процессов с id 1..n и равномерно случайными pᵢ, ioᵢ, qᵢ из заданных диапазонов
     (границы включены; диапазоны по умолчанию дают pᵢ>0, qᵢ>0)."""
     return [
-        Process(i, rng.randint(*p_range), rng.randint(*o_range), rng.randint(*q_range))
+        Process(i, rng.randint(*p_range), rng.randint(*io_range), rng.randint(*q_range))
         for i in range(1, n + 1)
     ]
 
 
 def wspt_individual(processes: Sequence[Process]) -> Individual:
     """Правило Смита (WSPT): блоки процессов по неубыванию pᵢ/qᵢ. Точный оптимум
-    1||ΣqᵢCᵢ (I/O добавляет константу Σqᵢoᵢ и порядок не меняет), поэтому F этой
+    1||ΣqᵢCᵢ (I/O добавляет константу Σqᵢ·ioᵢ и порядок не меняет), поэтому F этой
     особи — нижняя граница F для любой допустимой особи. Дробь точная (Fraction),
     ничьи разрешаются по id."""
     order = sorted(processes, key=lambda pr: (Fraction(pr.p, pr.q), pr.id))
@@ -262,12 +262,12 @@ def wspt_individual(processes: Sequence[Process]) -> Individual:
 # --- Демонстрация и самопроверка ----------------------------------------------
 
 PROCESSES = [
-    Process(1, p=5, o=3, q=5),
-    Process(2, p=2, o=5, q=1),
-    Process(3, p=9, o=1, q=2),
-    Process(4, p=1, o=4, q=6),
-    Process(5, p=5, o=2, q=3),
-    Process(6, p=3, o=6, q=4),
+    Process(1, p=5, io=3, q=5),
+    Process(2, p=2, io=5, q=1),
+    Process(3, p=9, io=1, q=2),
+    Process(4, p=1, io=4, q=6),
+    Process(5, p=5, io=2, q=3),
+    Process(6, p=3, io=6, q=4),
 ]
 
 

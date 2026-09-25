@@ -20,7 +20,7 @@ function randInt(rng, maxExclusive) {
 }
 
 // --- Модель процессов ---
-// processes: массив {id, p, o, q} (id — 1..n, p>0, o>=0, q>0), см. CLAUDE.md.
+// processes: массив {id, p, io, q} (id — 1..n, p>0, io>=0, q>0), см. CLAUDE.md.
 
 function horizon(processes) {
   return processes.reduce((s, pr) => s + pr.p, 0);
@@ -69,7 +69,7 @@ function scheduleCompletionTimes(schedule, processes) {
   const result = new Map();
   for (const pr of processes) {
     const E = (lastIndex.get(pr.id) ?? -1) + 1; // переводим в 1-индексацию квантов
-    const C = E + pr.o;
+    const C = E + pr.io;
     result.set(pr.id, { E, C });
   }
   return result;
@@ -283,8 +283,8 @@ function priorityScheduling(processes) {
 }
 
 // Правило Смита / WSPT: по неубыванию p_i/q_i. Точный оптимум задачи
-// 1||ΣqᵢCᵢ (research_notes.md §0); слагаемое Σqᵢoᵢ от порядка не зависит,
-// поэтому правило точно и при o_i>0.
+// 1||ΣqᵢCᵢ (research_notes.md §0); слагаемое Σqᵢ·ioᵢ от порядка не зависит,
+// поэтому правило точно и при io_i>0.
 function wsptSmith(processes) {
   return greedyNonPreemptive(processes, (a, b) => a.p / a.q - b.p / b.q);
 }

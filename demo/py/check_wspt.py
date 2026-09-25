@@ -1,6 +1,6 @@
 """Массовая проверка правила Смита (WSPT) на случайных наборах процессов.
 
-Что проверяется (WSPT — точный оптимум 1||ΣqᵢCᵢ, I/O добавляет константу Σqᵢoᵢ):
+Что проверяется (WSPT — точный оптимум 1||ΣqᵢCᵢ, I/O добавляет константу Σqᵢ·ioᵢ):
   1. Перебор всех порядков блоков (n <= 7): min F совпадает с F(WSPT).
   2. Полный перебор всех различных хромосом на крошечных наборах: прерывистые
      расписания (несмежные кванты) не лучше блочного WSPT.
@@ -71,11 +71,11 @@ def check_random_individuals(rng: random.Random, instances: int) -> None:
 
 
 def check_io_shift(rng: random.Random, instances: int) -> None:
-    """F с I/O = F без I/O + Σqᵢoᵢ для любой особи."""
+    """F с I/O = F без I/O + Σqᵢ·ioᵢ для любой особи."""
     for _ in range(instances):
         procs = random_processes(rng.randint(2, 15), rng)
-        no_io = [replace(pr, o=0) for pr in procs]
-        shift = sum(pr.q * pr.o for pr in procs)
+        no_io = [replace(pr, io=0) for pr in procs]
+        shift = sum(pr.q * pr.io for pr in procs)
         x = generate_individual(gene_pool(procs), rng)
         assert objective(x, procs) == objective(x, no_io) + shift
 
@@ -93,7 +93,7 @@ def main() -> None:
         ("перебор порядков блоков == WSPT", check_block_orders),
         ("перебор всех хромосом == WSPT", check_all_chromosomes),
         ("случайные особи >= WSPT", check_random_individuals),
-        ("сдвиг F из-за I/O == Σqᵢoᵢ", check_io_shift),
+        ("сдвиг F из-за I/O == Σqᵢ·ioᵢ", check_io_shift),
     ]:
         fn(rng, k)
         print(f"OK  {name} ({k} наборов, seed={args.seed})")
