@@ -175,3 +175,7 @@ pyrightconfig.json
 .pre-commit-config.yaml
 
 # End of https://www.toptal.com/developers/gitignore/api/python
+
+# Презентация (pptx и HTML-дек) ведётся отдельно и хранится только локально
+*.pptx
+presentation/

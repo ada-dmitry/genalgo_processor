@@ -47,9 +47,6 @@ This is primarily a **research/presentation project**, not a software product:
 ```
 docs/                 research_notes.md, ga_theory_notes.md — source material
 talk/                 presentation_script.md, speech.md — slide outline and full speech
-presentation/
-  Prez_IAD_-RED1.pptx the team's final PowerPoint (30 slides) — the primary deck
-  web/                deck.html, ga_history.js, README.md — HTML version of the deck
 demo/
   js/                 scheduler_ga.js, run_demo.js, compare_selection.js, render_charts.js
   py/                 ga_model.py, check_wspt.py, selection_pressure.py
@@ -62,8 +59,9 @@ No global `node`/`python3` on this machine: use the flake devShell (`nix develop
 `nix-shell -p python3 --run "..."` for the Python scripts. All commands below run from the repo root.
 No build/lint/test tooling beyond the demo scripts themselves.
 
-The old `slides/deck.pptx`, `slides/deck_editable.pptx` and `slides/build_*.py` were removed (stale,
-predated the `rᵢ` removal; still available in the first commit).
+The presentation itself (the team's pptx and an HTML deck) is maintained by a separate person and is **not
+in the repository**: a local `presentation/` directory may exist but is git-ignored (as is `*.pptx`), and
+it was purged from history. Don't add deck files back without the user asking.
 
 ## Research materials
 
@@ -85,19 +83,12 @@ Read both before writing report/presentation content or changing GA operators.
 
 ## Presentation
 
-- `presentation/Prez_IAD_-RED1.pptx` — the team's final deck (30 slides), the primary presentation.
-- `talk/speech.md` — full continuous speech (read nearly verbatim) for `Prez_IAD_-RED1.pptx`. Includes a
+- `talk/speech.md` — full continuous speech (read nearly verbatim) for the team's 30-slide pptx. Includes a
   worked example: 3 processes (`P1: p=8,q=2`; `P2: p=2,q=3`; `P3: p=5,q=1`; `io=0`) with `F(x)` for FCFS
   (61), Round Robin q=2 (55), SJF (43), Priority (41, coincidentally optimal), WSPT/Smith (41, provably
   optimal — brute-forced over all 6 orders).
 - `talk/presentation_script.md` — per-slide visual plan of the original 13-slide outline (audience: not
   CS specialists; overview depth, no proofs). Keep it and `speech.md` in sync.
-- `presentation/web/deck.html` — HTML version of the deck: 12 slides of the outline (no "Итоги"), Russian,
-  plain HTML/CSS/JS, Google Fonts only external dependency. Navigation: arrows/space/Home/End, click halves,
-  swipe, `F` fullscreen, `#slide-N`; bottom rail is a chromosome, one quantum per slide. Diagrams are built
-  in page JS from `data-*` attributes and `presentation/web/ga_history.js`. Print to PDF = one slide per
-  landscape page. See `presentation/web/README.md` for regenerating `ga_history.js` from
-  `demo/data/convergence.json`.
 
 ## Demo program
 
@@ -150,12 +141,10 @@ processes after 400 generations the gap to WSPT is still 145 % (proportional) / 
 
 ## Open items
 
-- Numbers are hardcoded in several places: `presentation/web/deck.html`,
-  `demo/charts/convergence_chart.html`, `talk/presentation_script.md`, `talk/speech.md` (and the pptx).
+- Numbers are hardcoded in several places: `demo/charts/convergence_chart.html`,
+  `talk/presentation_script.md`, `talk/speech.md` (and the out-of-repo presentation).
   Changing the test set or GA parameters means updating all of them by hand.
 - Release times `rᵢ` were tried and abandoned: the model briefly had per-process arrival times (priority-list
   chromosome, non-preemptive `decode()`, idle time, online baselines); everything was reverted to
-  chromosome = schedule across `demo/`, the deck, talk and docs. This is why the "why GA" argument is
+  chromosome = schedule across `demo/`, talk and docs. This is why the "why GA" argument is
   framed as universality (see "Важное следствие модели").
-- `presentation/web/deck.html` has no "Итоги" (conclusions) slide — it never existed there; the author
-  decides whether to add one.

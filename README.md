@@ -15,9 +15,6 @@ docs/
 talk/
   presentation_script.md   план слайдов
   speech.md                полный текст выступления
-presentation/
-  Prez_IAD_-RED1.pptx      итоговая презентация (30 слайдов) — основная
-  web/                     HTML-версия презентации (deck.html, ga_history.js, README.md)
 demo/
   js/                      ГА, базовые алгоритмы, запуск демо, сравнение отборов, рендер графиков
   py/                      пошаговый разбор первой половины ГА, проверки правила Смита, давление отбора
@@ -43,11 +40,11 @@ python demo/py/selection_pressure.py  # → demo/data/selection_pressure_data.js
 
 Без devShell Python-скрипты можно запустить через `nix-shell -p python3 --run "python demo/py/ga_model.py"`.
 
-HTML-презентация: откройте `presentation/web/deck.html` в браузере (стрелки/пробел, `F` — полный экран).
-Как пересобрать `ga_history.js` из `demo/data/convergence.json` — в `presentation/web/README.md`.
+Сама презентация (pptx и HTML-версия) ведётся отдельно и в репозиторий не входит — `presentation/` в
+`.gitignore`.
 
 ## Захардкоженные числа
 
-Результаты демо вписаны вручную в `presentation/web/deck.html`, `demo/charts/convergence_chart.html`,
-`talk/presentation_script.md`, `talk/speech.md` и в pptx. При смене тестового набора или параметров ГА их
+Результаты демо вписаны вручную в `demo/charts/convergence_chart.html`, `talk/presentation_script.md`,
+`talk/speech.md` и в презентацию. При смене тестового набора или параметров ГА их
 нужно обновить руками во всех этих местах.

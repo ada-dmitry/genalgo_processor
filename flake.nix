@@ -27,7 +27,7 @@
 
       # ruff — для demo/py, nixfmt — для самого flake.nix.
       # JS/HTML-форматтер не подключён: prettier и biome переформатировали бы
-      # весь demo/js и presentation/web/deck.html.
+      # весь demo/js и demo/charts/*.html.
       treefmtEval = treefmt-nix.lib.evalModule pkgs {
         projectRootFile = "flake.nix";
         programs.ruff-format.enable = true;
