@@ -65,7 +65,11 @@ def main() -> None:
         print(row, flush=True)
     meta = {"n": N_PROCESSES, "M": POP_SIZE, "seeds": len(SEEDS)}
     out = Path(__file__).with_name("selection_pressure_data.js")
-    out.write_text("window.SP_DATA = " + json.dumps({"meta": meta, "rows": rows}, ensure_ascii=False) + ";\n")
+    out.write_text(
+        "window.SP_DATA = "
+        + json.dumps({"meta": meta, "rows": rows}, ensure_ascii=False)
+        + ";\n"
+    )
     print("записано", out)
 
 

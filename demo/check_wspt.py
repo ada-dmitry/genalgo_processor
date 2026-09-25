@@ -19,8 +19,8 @@ from dataclasses import replace
 
 from ga_model import (
     Process,
-    generate_individual,
     gene_pool,
+    generate_individual,
     is_valid,
     objective,
     random_processes,
@@ -52,7 +52,8 @@ def check_all_chromosomes(rng: random.Random, instances: int) -> None:
             continue
         f_wspt = objective(wspt_individual(procs), procs)
         f_min = min(
-            objective(list(x), procs) for x in set(itertools.permutations(gene_pool(procs)))
+            objective(list(x), procs)
+            for x in set(itertools.permutations(gene_pool(procs)))
         )
         assert f_min == f_wspt, (procs, f_min, f_wspt)
 
@@ -82,7 +83,9 @@ def check_io_shift(rng: random.Random, instances: int) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description="Проверки по WSPT на случайных процессах")
     ap.add_argument("--seed", type=int, default=1)
-    ap.add_argument("--instances", type=int, default=100, help="наборов на каждую проверку")
+    ap.add_argument(
+        "--instances", type=int, default=100, help="наборов на каждую проверку"
+    )
     args = ap.parse_args()
     rng = random.Random(args.seed)
     k = args.instances

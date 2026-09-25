@@ -324,9 +324,9 @@ def self_check(n_random: int | None = None, seed: int = 2, p_max: int = 10) -> N
     assert p1 != p2
     # пара из разных особей, даже когда одна особь держит половину всей рулетки
     skewed = [1.0 / (len(population) - 1)] * (len(population) - 1) + [1.0]
-    assert all(
-        (lambda a, b: a != b)(*select_parents(population, skewed, rng)) for _ in range(2000)
-    )
+    for _ in range(2000):
+        a, b = select_parents(population, skewed, rng)
+        assert a != b
     # вырожденная популяция (все особи одинаковы) — не зависаем, принимаем пару как есть
     same = [population[0][:] for _ in range(4)]
     i, j, spins = pick_parent_pair(same, [1.0] * 4, rng, max_attempts=10)
@@ -418,13 +418,23 @@ def trace(
         cum.append(acc)
     _table(
         ["j", "fitness", "интервал r", "накопл., %"],
-        [[j, f"{fits[j - 1]:.6f}",
-          f"({cum[j - 1] - fits[j - 1]:.6f}; {cum[j - 1]:.6f}]",
-          f"{cum[j - 1] / cum[-1] * 100:.2f}"] for j in range(1, size + 1)],
+        [
+            [
+                j,
+                f"{fits[j - 1]:.6f}",
+                f"({cum[j - 1] - fits[j - 1]:.6f}; {cum[j - 1]:.6f}]",
+                f"{cum[j - 1] / cum[-1] * 100:.2f}",
+            ]
+            for j in range(1, size + 1)
+        ],
     )
     first, second, spins = pick_parent_pair(population, fits, rng)
     for n, (j, r, total) in enumerate(spins):
-        who = "Родитель 1" if n == 0 else ("Родитель 2" if n == 1 else f"Родитель 2 (попытка {n})")
+        who = (
+            "Родитель 1"
+            if n == 0
+            else ("Родитель 2" if n == 1 else f"Родитель 2 (попытка {n})")
+        )
         line = f"{who}: r = U(0, {total:.6f}) = {r:.6f}  → попало в интервал особи x{j + 1}"
         if n >= 1 and population[j] == population[first]:
             line += "  — совпал с родителем 1, крутим заново"
