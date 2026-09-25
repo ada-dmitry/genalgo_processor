@@ -40,121 +40,122 @@ This is primarily a **research/presentation project**, not a software product:
 
 **Критерий остановки:** `g ≥ G_max`, либо `fitness_best` не улучшается `K` поколений подряд. В демо (`runGA`) реализован только первый пункт.
 
-**Важное следствие модели (не подавать иначе):** `F(x) = ΣqᵢEᵢ + Σqᵢoᵢ`, второе слагаемое от расписания не зависит, поэтому I/O порядок не меняет, а задача — это классическая `1||ΣwⱼCⱼ`, решаемая **точно** правилом Смита / WSPT (оптимально и среди вытесняющих расписаний). ГА для *этой* модели не нужен; его роль — универсальный метод, не опирающийся на структуру `F` (переносится на усложнённые постановки), плюс валидация по точному эталону. См. `research_notes.md` §0.
+**Важное следствие модели (не подавать иначе):** `F(x) = ΣqᵢEᵢ + Σqᵢ·ioᵢ`, второе слагаемое от расписания не зависит, поэтому I/O порядок не меняет, а задача — это классическая `1||ΣwⱼCⱼ`, решаемая **точно** правилом Смита / WSPT (оптимально и среди вытесняющих расписаний). ГА для *этой* модели не нужен; его роль — универсальный метод, не опирающийся на структуру `F` (переносится на усложнённые постановки), плюс валидация по точному эталону. См. `docs/research_notes.md` §0.
+
+## Repository layout
+
+```
+docs/                 research_notes.md, ga_theory_notes.md — source material
+talk/                 presentation_script.md, speech.md — slide outline and full speech
+presentation/
+  Prez_IAD_-RED1.pptx the team's final PowerPoint (30 slides) — the primary deck
+  web/                deck.html, ga_history.js, README.md — HTML version of the deck
+demo/
+  js/                 scheduler_ga.js, run_demo.js, compare_selection.js, render_charts.js
+  py/                 ga_model.py, check_wspt.py, selection_pressure.py
+  data/               convergence.json, selection_compare_data.js, selection_pressure_data.js
+  charts/             *_chart.html + rendered *.svg / *.png
+flake.nix, .envrc     devShell with nodejs + python3 (`nix develop` or direnv)
+```
+
+No global `node`/`python3` on this machine: use the flake devShell (`nix develop` / direnv), or
+`nix-shell -p python3 --run "..."` for the Python scripts. All commands below run from the repo root.
+No build/lint/test tooling beyond the demo scripts themselves.
+
+The old `slides/deck.pptx`, `slides/deck_editable.pptx` and `slides/build_*.py` were removed (stale,
+predated the `rᵢ` removal; still available in the first commit).
 
 ## Research materials
 
-`research_notes.md` collects vetted sources on: GA applied to CPU/process scheduling, crossover/mutation
-operators for permutation-with-repetition chromosomes (the key open design question — see Bierwirth's GOX
-operator), classical scheduling algorithms for comparison (FCFS/SJF/RR/Priority), the CPU-burst/I/O-burst
-OS model, real-world OS scheduler design for contrast (Linux CFS/EEVDF, Windows priority+MMCSS, macOS QoS,
-Android EAS — §4a), and GA selection-scheme theory. It also documents an important framing point: this
-project's objective is the classical `1||ΣwⱼCⱼ` problem (I/O only adds the constant `Σqᵢoᵢ`), solved exactly by **Smith's rule / WSPT**
-— useful as a validation baseline for the demo; the honest "why GA" narrative is universality of the method, not that the exact rule fails. Read it before writing the report/presentation content or picking a
-crossover operator.
+`docs/research_notes.md` — vetted sources: GA for CPU/process scheduling, crossover/mutation operators for
+permutation-with-repetition chromosomes (Bierwirth's GOX), classical algorithms (FCFS/SJF/RR/Priority), the
+CPU-burst/I/O-burst model, real OS schedulers for contrast (Linux CFS/EEVDF, Windows priority+MMCSS, macOS
+QoS, Android EAS — §4a), GA selection theory, and the framing point that the objective is `1||ΣwⱼCⱼ`
+solved exactly by Smith's rule / WSPT (§0) — the honest "why GA" narrative is universality of the method,
+not that the exact rule fails.
 
-`ga_theory_notes.md` collects general GA theory from the user's own course-lecture notes (same course,
-`Лекции_по_Ген_Алго.pdf`), reframed against this project's specific model: encoding classification, parent
-selection vs. survivor selection terminology, evolution models (Darwin/Lamarck/de Vries/Popper) for the
-theory slide, GA modifications (Genitor/CHC/hybrid/GAVaPS) and island-model parallel GA for a "future work"
-slide, and concrete tuning reference values (`Pc` ≈ 80–95%, `Pm` ≈ 0.5–1%, `N` ≈ 20–30, up to 50–100 for
-harder problems). **Key resolved design decision:** for this project's permutation-with-repetition
-chromosome, swap/insertion/reversal mutation (picking two positions and rearranging them) trivially
-preserves the "`i` appears exactly `pᵢ` times" invariant with no repair needed — unlike crossover, mutation
-does *not* need a specialized operator here. Read it alongside `research_notes.md` before writing the
-report/presentation or implementing the GA.
+`docs/ga_theory_notes.md` — general GA theory from the user's own course-lecture notes
+(`Лекции_по_Ген_Алго.pdf`), reframed for this model: encoding classification, parent vs. survivor
+selection, evolution models (Darwin/Lamarck/de Vries/Popper), modifications (Genitor/CHC/hybrid/GAVaPS),
+island-model GA, tuning values (`Pc` ≈ 80–95%, `Pm` ≈ 0.5–1%, `N` ≈ 20–30, up to 50–100 for harder
+problems). **Resolved design decision:** swap/insertion/reversal mutation trivially preserves the
+"`i` appears exactly `pᵢ` times" invariant — only crossover needs a specialized operator.
 
-## Presentation script
+Read both before writing report/presentation content or changing GA operators.
 
-`presentation_script.md` is the per-slide draft narration for the 13-slide outline (audience: not
-CS-specialists, but normal technical terms are fine — overview depth, no derivations/proofs). Covers: the
-scheduling problem, classical algorithms, a real-OS scheduler comparison slide, this project's formal
-model, the "why GA" Smith's-rule argument, GA lifecycle, how the model maps onto a GA, the crossover/
-mutation operator specifics, results (slide 10, filled in with real demo numbers), conclusions, and future
-work.
+## Presentation
 
-`speech.md` is the full continuous speech built from that same outline — not slide-by-slide notes but
-connected spoken prose meant to be read/rehearsed nearly verbatim (~18-22 min). It elaborates the classical
-algorithms (§3) and Smith's-rule (§6) sections with a worked numeric example: 3 processes (`P1: p=8,q=2`;
-`P2: p=2,q=3`; `P3: p=5,q=1`; `o=0`), showing the actual resulting order and `F(x)` for FCFS (61), Round
-Robin q=2 (55), SJF (43), Priority Scheduling (41, coincidentally optimal here), and WSPT/Smith's rule (41,
-provably optimal — confirmed by brute-forcing all 6 orderings). Keep `speech.md` and `presentation_script.md`
-in sync if either changes — `speech.md` is strictly more detailed, built on top of the same slide structure.
+- `presentation/Prez_IAD_-RED1.pptx` — the team's final deck (30 slides), the primary presentation.
+- `talk/speech.md` — full continuous speech (read nearly verbatim) for `Prez_IAD_-RED1.pptx`. Includes a
+  worked example: 3 processes (`P1: p=8,q=2`; `P2: p=2,q=3`; `P3: p=5,q=1`; `io=0`) with `F(x)` for FCFS
+  (61), Round Robin q=2 (55), SJF (43), Priority (41, coincidentally optimal), WSPT/Smith (41, provably
+  optimal — brute-forced over all 6 orders).
+- `talk/presentation_script.md` — per-slide visual plan of the original 13-slide outline (audience: not
+  CS specialists; overview depth, no proofs). Keep it and `speech.md` in sync.
+- `presentation/web/deck.html` — HTML version of the deck: 12 slides of the outline (no "Итоги"), Russian,
+  plain HTML/CSS/JS, Google Fonts only external dependency. Navigation: arrows/space/Home/End, click halves,
+  swipe, `F` fullscreen, `#slide-N`; bottom rail is a chromosome, one quantum per slide. Diagrams are built
+  in page JS from `data-*` attributes and `presentation/web/ga_history.js`. Print to PDF = one slide per
+  landscape page. See `presentation/web/README.md` for regenerating `ga_history.js` from
+  `demo/data/convergence.json`.
 
 ## Demo program
 
-`demo/` is a small illustrative implementation in **plain Node.js** (no npm dependencies — this machine has
-no Python interpreter installed, only Node). Not production code; exists to back slide 10 with real numbers.
+Illustrative, not production code; backs the results slide with real numbers.
 
-- `demo/scheduler_ga.js` — the model: chromosome generation, `objective`/`fitness` per the formulas above
-  (the chromosome is the schedule itself, no decoding step), **GOX crossover**
-  (Bierwirth 1995, generalized order crossover — copies a segment from one parent, fills the rest from the
-  other in order, guaranteed to preserve the "`i` appears exactly `pᵢ` times" invariant), **mutation** via
-  swap/insertion/reversal (trivially valid, see `ga_theory_notes.md` §4), roulette selection with elitism,
-  the classical baselines (FCFS by process id, SJF, Priority, WSPT/Smith's rule, Round Robin with quantum 1),
-  and `bruteForceOptimal` (exhaustive search over all `n!` process orders — exact ground truth for small
-  `n`; intractable once `n` grows).
-- `demo/run_demo.js` — runs the GA on a fixed 6-process test set and prints a comparison table plus
-  validation checks (`bruteForceOptimal` on the full test set; WSPT vs brute force; the same with `oᵢ=0`,
-  where brute force, WSPT and the GA must agree, and the check that the I/O shift of `F` equals `Σqᵢoᵢ`); run
-  with `node demo/run_demo.js` from the repo root (or from inside `demo/`). Writes `demo/convergence.json`
-  (per-generation best/avg fitness history plus the brute-force optimum).
-- `demo/ga_model.py` — Python port of the first half of the GA (stdlib only): model, individual, population generation, validity, fitness of individual/population, stopping criterion, roulette parent selection; by default prints a step-by-step trace (data → first individual → population → fitness/probabilities → stopping criterion → roulette parent selection; flags `--size M`, `--random N --p-max P`, `--seed S`), `--check` runs the asserting self-checks (`nix-shell -p python3 --run "python demo/ga_model.py [--check]"` — no global Python). Crossover/mutation/survivor selection are not ported yet. `demo/check_wspt.py` — batch checks of Smith's rule on random instances (block-order brute force, exhaustive chromosome enumeration for tiny H, random individuals ≥ WSPT, I/O shift = Σqᵢoᵢ); `ga_model.py --random N --seed S` uses random processes. `demo/selection_pressure.py` computes selection pressure `M·Pr(best)` of proportional (`1/(1+F)`), shifted (`F_max−F`) and linear-rank selection vs the scale of `pᵢ` (50 processes, `p≤10…10000`) into `demo/selection_pressure_data.js`; `demo/selection_pressure_chart.html` plots it. Finding: proportional selection on `1/(1+F)` degenerates to random choice (1.06× → 1.003×) as `p` grows; scaling fitness by a constant does nothing (it cancels), rank selection stays at 2×. `runGA` in `scheduler_ga.js` takes `selection: 'proportional' | 'shifted' | 'rank'` (default `proportional` — results unchanged); `demo/compare_selection.js` (`node demo/compare_selection.js`, ~1.5 min) runs all three on the 6-process demo set and on 50 random processes with `p≤100` (H=2713), 5 seeds, and writes `selection_compare_data.js`, plotted by `demo/selection_generations_chart.html` (gap of best F to the WSPT optimum per generation). Result: on 6 processes shifted/rank reach the optimum on all seeds, proportional ends at +0.66 % on average; on 50 processes after 400 generations the gap is still 145 % (proportional) / 138 % (shifted) / 125 % (rank) — the GA is far from Smith's rule at this chromosome length. `node demo/render_charts.js` renders both selection charts as static light-theme `demo/charts/*.svg` (self-contained, colors inlined) and 2× `*.png` (via headless chromium if in PATH) — use these for slides; rerun it after regenerating the data files. `rank_probabilities` in `ga_model.py` is not wired into `select_parents` — the fitness formula/selection choice is the user's call.
-- `demo/convergence_chart.html` — standalone chart (convergence line chart + baseline comparison bars)
-  built from that history; published as a Claude Artifact for slide 10. Regenerate its embedded data after
-  changing the test set or GA parameters in `run_demo.js` (the history array is inlined in the script, not
-  loaded at runtime).
+- `demo/js/scheduler_ga.js` — the model (chromosome = schedule, no decoding), `objective`/`fitness`,
+  **GOX crossover** (Bierwirth 1995; preserves the `pᵢ`-count invariant), swap/insertion/reversal
+  mutation, selection with elitism, baselines (FCFS by id, SJF, Priority, WSPT/Smith, Round Robin
+  quantum 1), `bruteForceOptimal` (all `n!` process orders — exact for small `n`). `runGA` takes
+  `selection: 'proportional' | 'shifted' | 'rank'` (default `proportional`).
+- `demo/js/run_demo.js` (`node demo/js/run_demo.js`) — GA on the fixed 6-process set, comparison table and
+  validation checks (brute force; WSPT vs brute force; `ioᵢ=0` case where brute force, WSPT and GA agree;
+  I/O shift of `F` = `Σqᵢ·ioᵢ`). Writes `demo/data/convergence.json`.
+- `demo/js/compare_selection.js` (`node demo/js/compare_selection.js`, ~1.5 min) — the three selection
+  schemes on the 6-process set and on 50 random processes with `p≤100` (H=2713), 5 seeds →
+  `demo/data/selection_compare_data.js`, plotted by `demo/charts/selection_generations_chart.html`.
+- `demo/js/render_charts.js` (`node demo/js/render_charts.js`) — renders both selection charts as static
+  light-theme `demo/charts/*.svg` and 2× `*.png` (headless chromium if in PATH) for slides; rerun after
+  regenerating data files.
+- `demo/py/ga_model.py` — stdlib Python port of the first half of the GA (model, population, validity,
+  fitness, stopping criterion, roulette parent selection); prints a step-by-step trace (`--size M`,
+  `--random N --p-max P`, `--seed S`), `--check` runs self-checks. Crossover/mutation/survivor selection
+  not ported. `rank_probabilities` is not wired into `select_parents` — fitness/selection choice is the
+  user's call.
+- `demo/py/check_wspt.py` — batch checks of Smith's rule on random instances (block-order brute force,
+  exhaustive chromosome enumeration for tiny H, random individuals ≥ WSPT, I/O shift = Σqᵢ·ioᵢ).
+- `demo/py/selection_pressure.py` — selection pressure `M·Pr(best)` of proportional (`1/(1+F)`), shifted
+  (`F_max−F`) and linear-rank selection vs the scale of `pᵢ` (50 processes, `p≤10…10000`) →
+  `demo/data/selection_pressure_data.js`, plotted by `demo/charts/selection_pressure_chart.html`.
+- `demo/charts/convergence_chart.html` — convergence + baseline bars for the results slide (published as a
+  Claude Artifact); its history array is **inlined**, regenerate after changing the test set or GA params.
 
-**Current tuned settings** (in `run_demo.js`): population 60, 400 generations, `Pc=0.85`, mutation
-probability 0.2, elitism 2, seed 2. The test set's `p`/`o`/`q` were deliberately decorrelated
-so FCFS/SJF/Priority/WSPT each give a different order (an earlier draft accidentally had `q_i = 7 - p_i`,
-making SJF/Priority/WSPT coincide — not a useful comparison).
+Python: `python demo/py/ga_model.py [--check]` inside the devShell, or
+`nix-shell -p python3 --run "python demo/py/ga_model.py"`.
 
-**Validated result:** exact optimum via full permutation search over all `6!=720` orders is `F=243`; WSPT
-gives 243 too (exact for this model, not a coincidence); the GA (seed 2) finds 243, but only at generation
-345 of 400. Other seeds (1..20, same settings): 10 of 20 reach 243, the rest end at 244–248 — the GA gives
-no optimum guarantee, say so in the talk. Priority 252, SJF 260, Round Robin 363, FCFS 386. With `oᵢ=0`
-brute force, WSPT and GA all give `F=167`; the difference 243−167=76 equals `Σqᵢoᵢ`, confirming that I/O
-only shifts `F` by a constant.
+**Tuned settings** (`run_demo.js`): population 60, 400 generations, `Pc=0.85`, mutation probability 0.2,
+elitism 2, seed 2. The test set's `p`/`io`/`q` are deliberately decorrelated so FCFS/SJF/Priority/WSPT give
+different orders (an earlier `q_i = 7 - p_i` made SJF/Priority/WSPT coincide).
 
-## Current state
+**Validated result:** brute force over all `6!=720` orders gives `F=243`; WSPT gives 243 (exact, not a
+coincidence); the GA (seed 2) finds 243 only at generation 345 of 400. Seeds 1..20: 10 of 20 reach 243,
+the rest end at 244–248 — the GA gives no optimum guarantee, say so in the talk. Priority 252, SJF 260,
+Round Robin 363, FCFS 386. With `ioᵢ=0` brute force, WSPT and GA all give `F=167`; 243−167=76 = `Σqᵢ·ioᵢ`.
 
-The repository has: `CLAUDE.md` (problem statement), `research_notes.md` and `ga_theory_notes.md` (source
-material), `presentation_script.md` + `speech.md` (script and full speech with real demo results), `demo/`
-(working Node.js GA + baselines + chart, see above), and `slides/` (the actual slide deck — see below).
-No build/lint/test tooling beyond `node demo/run_demo.js`.
+**Selection findings:** proportional selection on `1/(1+F)` degenerates to random choice as `p` grows
+(pressure 1.06× → 1.003×); scaling fitness by a constant cancels out; rank selection stays at 2×. On
+6 processes shifted/rank reach the optimum on all seeds, proportional ends at +0.66 % on average; on 50
+processes after 400 generations the gap to WSPT is still 145 % (proportional) / 138 % (shifted) / 125 %
+(rank) — the GA is far from Smith's rule at this chromosome length.
 
-## Slide deck
+## Open items
 
-`slides/deck.html` is the presentation itself: a single self-contained HTML deck implementing 12 of the 13
-slides of `presentation_script.md` (no "Итоги" — see Open items), in Russian. Plain HTML/CSS/JS, no
-framework; Google Fonts (Unbounded display + IBM Plex Sans/Mono) are the only external dependency.
-Navigation: arrows/space/Home/End, click halves, swipe, `F` for fullscreen, `#slide-N` hash; the bottom nav
-rail is styled as a chromosome with one quantum per slide (built dynamically from the slide count).
-Diagrams (Gantt rows, chromosome strips, GA lifecycle ring, roulette, branch tree, convergence chart) are
-built in the page's own JS from `data-*` attributes and from `slides/ga_history.js`. Print to PDF gives one
-slide per landscape page. See `slides/README.md` for regenerating `ga_history.js` from
-`demo/convergence.json`.
-
-Open items:
-- Hardcoded numbers live in several places — `slides/deck.html`, `demo/convergence_chart.html`, and the
-  two script/speech files. Changing the test set or GA parameters means updating all of them by hand.
-- **Release times `rᵢ` abandoned (this session).** The model had briefly been extended with a per-process
-  arrival time `rᵢ` (chromosome = priority list, a non-preemptive `decode()` step, idle time, online baselines);
-  that concept was removed entirely and the model returned to the original one: chromosome = schedule,
-  `xₜ=i`, no decode. Cascaded through `demo/` (code, test set, `convergence.json`, `convergence_chart.html`),
-  `slides/deck.html` (slides "Модель", "Зачем ГА", "Особь", "Операторы", "Демонстрация"), `slides/ga_history.js`,
-  `slides/README.md`, `presentation_script.md`, `speech.md`, `research_notes.md`, `ga_theory_notes.md`.
-  Consequence: the "why GA" argument had to be reframed (see "Важное следствие модели" in the Problem
-  statement). `slides/deck.pptx`, `slides/deck_editable.pptx` and `slides/build_*.py` were **not** touched —
-  they predate the `rᵢ` cascade (old numbers, and the old, mathematically wrong claim on slide 7 that I/O
-  breaks Smith's rule); regenerating them needs python-pptx (no Python on this machine) and rewriting
-  `build_deck_slides.py` slide 7 / results by hand.
-- **Pre-existing `slides/deck.html` gap (found and partly fixed earlier).** The deck actually had
-  only 11 `<section>`s, not the 13 `slides/README.md` claimed: a "Демонстрация и результаты" slide (results
-  chart + comparison bars) was missing from the HTML entirely even though its full JS renderer already
-  existed, pointing at non-existent element ids (`#chart`/`#chartWrap`/`#bars`) — silently dead code. That
-  slide has been restored with the current numbers. An "Итоги" (conclusions) slide that
-  `slides/README.md` also claimed exists was **not** found or fabricated — there is no trace it was ever in
-  `deck.html`, and inventing closing-slide content wasn't this task's job. Author should decide whether to
-  add one or fix `slides/README.md`'s slide count expectation further (currently corrected to 12).
+- Numbers are hardcoded in several places: `presentation/web/deck.html`,
+  `demo/charts/convergence_chart.html`, `talk/presentation_script.md`, `talk/speech.md` (and the pptx).
+  Changing the test set or GA parameters means updating all of them by hand.
+- Release times `rᵢ` were tried and abandoned: the model briefly had per-process arrival times (priority-list
+  chromosome, non-preemptive `decode()`, idle time, online baselines); everything was reverted to
+  chromosome = schedule across `demo/`, the deck, talk and docs. This is why the "why GA" argument is
+  framed as universality (see "Важное следствие модели").
+- `presentation/web/deck.html` has no "Итоги" (conclusions) slide — it never existed there; the author
+  decides whether to add one.

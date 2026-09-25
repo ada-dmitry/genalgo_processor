@@ -5,13 +5,13 @@
 //   demo/charts/selection_pressure.svg|png    — давление отбора M·Pr(лучшая) против масштаба p
 // Светлая схема, цвета зашиты в SVG (файл самодостаточен, годится для слайдов и печати).
 // PNG строится тем же chromium в headless-режиме, если он есть в PATH; иначе остаётся только SVG.
-// Запуск: node demo/render_charts.js
+// Запуск: node demo/js/render_charts.js
 
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const OUT = path.join(__dirname, 'charts');
+const OUT = path.join(__dirname, '..', 'charts');
 const C = {
   surface: '#fcfcfb', ink: '#0b0b0b', ink2: '#52514e', muted: '#898781',
   grid: '#e1e0d9', axis: '#c3c2b7', s1: '#2a78d6', s2: '#eb6834', s3: '#1baf7a',
@@ -23,7 +23,7 @@ const SERIES = [
   { key: 'rank', color: C.s3, label: 'ранговый отбор (s = 2)', tip: 'ранговый' },
 ];
 
-const load = (f) => new Function('window', fs.readFileSync(path.join(__dirname, f), 'utf8') + '; return window;')({});
+const load = (f) => new Function('window', fs.readFileSync(path.join(__dirname, '..', 'data', f), 'utf8') + '; return window;')({});
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const num = (v) => Math.round(v * 10) / 10;
 const ru = (v, d) => v.toFixed(d).replace('.', ',');

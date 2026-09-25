@@ -5,9 +5,9 @@
   2. Полный перебор всех различных хромосом на крошечных наборах: прерывистые
      расписания (несмежные кванты) не лучше блочного WSPT.
   3. Случайные особи на больших наборах: F(x) >= F(WSPT) (нижняя граница).
-  4. Сдвиг из-за I/O: F(x) - F(x при oᵢ=0) = Σ qᵢoᵢ для любой особи.
+  4. Сдвиг из-за I/O: F(x) - F(x при ioᵢ=0) = Σqᵢ·ioᵢ для любой особи.
 
-Запуск: nix-shell -p python3 --run "python demo/check_wspt.py [--seed S] [--instances K]"
+Запуск: nix-shell -p python3 --run "python demo/py/check_wspt.py [--seed S] [--instances K]"
 """
 
 from __future__ import annotations

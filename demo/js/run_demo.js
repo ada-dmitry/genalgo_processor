@@ -90,7 +90,7 @@ function main() {
     PROCESSES.reduce((s, pr) => s + pr.q * pr.o, 0) + ')');
   console.log();
 
-  const outPath = path.join(__dirname, 'convergence.json');
+  const outPath = path.join(__dirname, '..', 'data', 'convergence.json');
   fs.writeFileSync(
     outPath,
     JSON.stringify(

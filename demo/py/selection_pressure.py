@@ -7,8 +7,8 @@
 популяции); линейный ранговый отбор (s=2). Простое умножение fitness на константу
 (например, нормировка на F_WSPT) вероятности не меняет — константа сокращается.
 
-Пишет demo/selection_pressure_data.js (window.SP_DATA) для selection_pressure_chart.html.
-Запуск: nix-shell -p python3 --run "python demo/selection_pressure.py"
+Пишет demo/data/selection_pressure_data.js (window.SP_DATA) для selection_pressure_chart.html.
+Запуск: nix-shell -p python3 --run "python demo/py/selection_pressure.py"
 """
 
 from __future__ import annotations
@@ -64,7 +64,7 @@ def main() -> None:
         rows.append(row)
         print(row, flush=True)
     meta = {"n": N_PROCESSES, "M": POP_SIZE, "seeds": len(SEEDS)}
-    out = Path(__file__).with_name("selection_pressure_data.js")
+    out = Path(__file__).resolve().parent.parent / "data" / "selection_pressure_data.js"
     out.write_text(
         "window.SP_DATA = "
         + json.dumps({"meta": meta, "rows": rows}, ensure_ascii=False)

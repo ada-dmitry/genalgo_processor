@@ -4,8 +4,8 @@
 // точному оптимуму (правило Смита) при selection = proportional | shifted | rank.
 // Два набора: 6 процессов из run_demo.js и 50 случайных процессов с p до 100.
 // Метрика — отрыв лучшего F от оптимума в %, среднее по нескольким seed.
-// Пишет demo/selection_compare_data.js (window.SC_DATA) для selection_generations_chart.html.
-// Запуск: node demo/compare_selection.js  (около 1.5 минут)
+// Пишет demo/data/selection_compare_data.js (window.SC_DATA) для selection_generations_chart.html.
+// Запуск: node demo/js/compare_selection.js  (около 1.5 минут)
 
 const fs = require('fs');
 const path = require('path');
@@ -57,6 +57,6 @@ const data = {
     run('50 процессов, p ≤ 100', randomProcesses(50, 100, 11)),
   ],
 };
-const out = path.join(__dirname, 'selection_compare_data.js');
+const out = path.join(__dirname, '..', 'data', 'selection_compare_data.js');
 fs.writeFileSync(out, 'window.SC_DATA = ' + JSON.stringify(data) + ';\n');
 console.log('записано', out);
